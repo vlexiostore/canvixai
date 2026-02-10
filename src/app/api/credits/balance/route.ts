@@ -11,6 +11,8 @@ export async function GET() {
       balance: user.creditsBalance,
       used: user.creditsUsed,
       plan: user.plan,
+      name: user.name || undefined,
+      email: user.email || undefined,
     });
   } catch (error) {
     return errorResponse(error as Error);

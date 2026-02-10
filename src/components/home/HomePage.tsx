@@ -11,43 +11,23 @@ import { TeamSection } from "@/components/home/team";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
 
-// Only load Ballpit on desktop (heavy Three.js component)
-const Ballpit = dynamic(() => import("@/components/Ballpit"), { ssr: false });
+// Aurora is lightweight (OGL-based) — safe for all screen sizes
+const Aurora = dynamic(() => import("@/components/Aurora"), { ssr: false });
 
 export default function HomePage() {
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
   return (
     <>
       {/* Hero Section */}
       <section className="relative z-10 overflow-hidden bg-[#0A0A0B] text-white min-h-[100dvh] flex items-center justify-center px-5 sm:px-6">
-        {/* Desktop: Ballpit, Mobile: gradient bg */}
-        {isDesktop ? (
-          <div className="absolute inset-0 z-0">
-            <Ballpit
-              count={100}
-              gravity={0.5}
-              friction={0.9975}
-              wallBounce={0.95}
-              followCursor
-              colors={["#000000", "#000000", "#ffffff"]}
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 z-0 pointer-events-none">
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-[120px]" />
-            <div className="absolute bottom-1/4 left-1/3 w-[200px] h-[200px] bg-orange-500/8 rounded-full blur-[100px]" />
-          </div>
-        )}
+        {/* Aurora background */}
+        <div className="absolute inset-0 z-0">
+          <Aurora
+            colorStops={["#9429ff", "#dbdbdb", "#312b88"]}
+            amplitude={1}
+            blend={0.5}
+          />
+        </div>
 
         <div className="max-w-7xl mx-auto relative z-10 w-full">
           <div className="text-center relative">
