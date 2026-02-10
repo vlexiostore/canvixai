@@ -1,6 +1,6 @@
 // @ts-nocheck
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   PlusCircle,
   PanelLeft,
@@ -9,6 +9,7 @@ import {
   Video,
   Trash2,
   ArrowLeft,
+  X,
 } from "lucide-react";
 
 interface ConversationItem {
@@ -40,6 +41,14 @@ export function Sidebar({
   onToggle,
 }: SidebarProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const getModeIcon = (mode: string) => {
     switch (mode) {
@@ -76,7 +85,30 @@ export function Sidebar({
     groups.push({ label: "Yesterday", items: yesterdayItems });
   if (olderItems.length) groups.push({ label: "Previous", items: olderItems });
 
-  if (collapsed) {
+  const handleSelectConversation = (id: string) => {
+    onSelectConversation(id);
+    if (isMobile) onToggle(); // auto-close on mobile
+  };
+
+  const handleNewChat = () => {
+    onNewChat();
+    if (isMobile) onToggle(); // auto-close on mobile
+  };
+
+  // ── Mobile: collapsed = just a toggle button in the corner
+  if (isMobile && collapsed) {
+    return (
+      <button
+        onClick={onToggle}
+        className="fixed top-3 left-3 z-30 p-2.5 bg-[#111] border border-[#333] rounded-xl text-gray-400 hover:text-white transition-colors"
+      >
+        <PanelLeft size={20} />
+      </button>
+    );
+  }
+
+  // ── Desktop: collapsed = thin icon strip
+  if (!isMobile && collapsed) {
     return (
       <aside className="fixed left-0 top-0 h-full w-[52px] bg-[#111111] flex flex-col items-center border-r border-[#222] z-20 py-4 gap-4">
         <button
@@ -95,25 +127,32 @@ export function Sidebar({
     );
   }
 
-  return (
-    <aside className="fixed left-0 top-0 h-full w-[260px] bg-[#111111] flex flex-col border-r border-[#222] z-20">
+  // ── Full sidebar content (shared between mobile overlay & desktop)
+  const sidebarContent = (
+    <aside
+      className={`${
+        isMobile
+          ? "fixed inset-y-0 left-0 w-[280px] z-50"
+          : "fixed left-0 top-0 h-full w-[260px] z-20"
+      } bg-[#111111] flex flex-col border-r border-[#222]`}
+    >
       {/* Header */}
-      <div className="p-5 flex items-center justify-between">
+      <div className="p-4 md:p-5 flex items-center justify-between">
         <span className="text-xl font-sans font-semibold text-purple-400">
           Canvix
         </span>
         <button
           onClick={onToggle}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-gray-400 hover:text-white transition-colors p-1"
         >
-          <PanelLeft size={20} />
+          {isMobile ? <X size={20} /> : <PanelLeft size={20} />}
         </button>
       </div>
 
       {/* Actions */}
       <div className="px-3 space-y-2">
         <button
-          onClick={onNewChat}
+          onClick={handleNewChat}
           className="flex items-center gap-3 text-white hover:bg-[#1a1a1a] w-full p-2.5 rounded-lg transition-colors"
         >
           <PlusCircle size={18} />
@@ -148,7 +187,7 @@ export function Sidebar({
             {group.items.map((conv) => (
               <button
                 key={conv.id}
-                onClick={() => onSelectConversation(conv.id)}
+                onClick={() => handleSelectConversation(conv.id)}
                 onMouseEnter={() => setHoveredId(conv.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-colors group relative ${
@@ -189,4 +228,21 @@ export function Sidebar({
       </div>
     </aside>
   );
+
+  // ── Mobile: render as overlay with backdrop
+  if (isMobile) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+          onClick={onToggle}
+        />
+        {sidebarContent}
+      </>
+    );
+  }
+
+  // ── Desktop: standard fixed sidebar
+  return sidebarContent;
 }

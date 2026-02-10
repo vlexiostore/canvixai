@@ -7,19 +7,19 @@ import { Layout, Grid, Layers } from "lucide-react";
 export function CollageMakerSection({ theme }: { theme?: "dark" | "light" }) {
     return (
         <Section id="collage-maker" className="bg-transparent" theme={theme}>
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row-reverse items-center gap-16">
-                <div className="flex-1 space-y-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row-reverse items-center gap-10 md:gap-16">
+                <div className="flex-1 space-y-4 md:space-y-6">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-blue-500/20 bg-blue-500/5">
                         <Layout size={16} className="text-blue-500" />
                         <span className="text-sm text-blue-500 font-medium">Collage Maker</span>
                     </div>
-                    <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl">
+                    <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
                         Tell a story with <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400">
                             Every Pixel
                         </span>
                     </h2>
-                    <p className="text-lg opacity-60 leading-relaxed max-w-lg">
+                    <p className="text-base md:text-lg opacity-60 leading-relaxed max-w-lg">
                         Combine your favorite moments into stunning photo collages. Choose from hundreds of artistic layouts and customize them to fit your style perfectly.
                     </p>
 
@@ -58,7 +58,7 @@ export function CollageMakerSection({ theme }: { theme?: "dark" | "light" }) {
                         </div>
 
                         {/* Floating Elements */}
-                        <div className="absolute -bottom-8 -left-8 bg-white p-4 rounded-xl shadow-xl flex items-center gap-3 animate-bounce-slow">
+                        <div className="absolute -bottom-4 -left-4 md:-bottom-8 md:-left-8 bg-white p-3 md:p-4 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-bounce-slow">
                             <Layers className="text-blue-500" />
                             <span className="font-bold text-black">Smart Layouts</span>
                         </div>

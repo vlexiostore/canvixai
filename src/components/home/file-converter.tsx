@@ -7,19 +7,19 @@ import { FileType, RefreshCw, FileImage, FileText } from "lucide-react";
 export function FileConverterSection({ theme }: { theme?: "dark" | "light" }) {
     return (
         <Section id="file-converter" className="bg-transparent" theme={theme}>
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-                <div className="flex-1 space-y-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                <div className="flex-1 space-y-4 md:space-y-6">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-green-500/20 bg-green-500/5">
                         <FileType size={16} className="text-green-500" />
                         <span className="text-sm text-green-500 font-medium">Universal Converter</span>
                     </div>
-                    <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl">
+                    <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
                         Convert anything <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-300">
                             in seconds
                         </span>
                     </h2>
-                    <p className="text-lg opacity-60 leading-relaxed max-w-lg">
+                    <p className="text-base md:text-lg opacity-60 leading-relaxed max-w-lg">
                         Seamlessly convert images, documents, and innovative formats. HEIC to JPG, PDF to PNG, WEBP to GIF - we handle it all with zero quality loss.
                     </p>
 

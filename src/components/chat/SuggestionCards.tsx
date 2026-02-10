@@ -64,23 +64,23 @@ export function SuggestionCards({ pageMode, onSelect }: SuggestionCardsProps) {
   const cards = pageMode === "studio" ? studioCards : chatCards;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-[720px] mx-auto mt-6">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full max-w-[720px] mx-auto mt-4 sm:mt-6">
       {cards.map((card) => (
         <button
           key={card.action}
           onClick={() => onSelect(card.action)}
-          className="text-left group bg-[#1a1a1a] hover:bg-[#1f1f1f] border border-[#2a2a2a] hover:border-[#333] rounded-xl p-4 transition-all duration-200"
+          className="text-left group bg-[#1a1a1a] hover:bg-[#1f1f1f] border border-[#2a2a2a] hover:border-[#333] rounded-xl p-3 sm:p-4 transition-all duration-200"
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-semibold text-sm text-white">
+          <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+            <span className="font-semibold text-xs sm:text-sm text-white leading-tight">
               {card.title}
             </span>
             <ChevronRight
               size={14}
-              className="text-gray-600 group-hover:translate-x-1 group-hover:text-gray-400 transition-all"
+              className="text-gray-600 group-hover:translate-x-1 group-hover:text-gray-400 transition-all shrink-0 hidden sm:block"
             />
           </div>
-          <p className="text-xs text-gray-500">{card.description}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 leading-snug">{card.description}</p>
         </button>
       ))}
     </div>

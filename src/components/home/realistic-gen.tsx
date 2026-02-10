@@ -7,19 +7,19 @@ import { Aperture, Star } from "lucide-react";
 export function RealisticGenSection({ theme }: { theme?: "dark" | "light" }) {
     return (
         <Section id="realistic-gen" className="bg-transparent" theme={theme}>
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-                <div className="flex-1 space-y-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                <div className="flex-1 space-y-4 md:space-y-6">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-rose-500/20 bg-rose-500/5">
                         <Aperture size={16} className="text-rose-500" />
                         <span className="text-sm text-rose-500 font-medium">Hyper-Realistic AI</span>
                     </div>
-                    <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl">
+                    <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
                         Blur the line between <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-red-400">
                             Real & AI
                         </span>
                     </h2>
-                    <p className="text-lg opacity-60 leading-relaxed max-w-lg">
+                    <p className="text-base md:text-lg opacity-60 leading-relaxed max-w-lg">
                         Generate photorealistic images that are indistinguishable from real photography. Perfect for stock photos, portraits, and detailed environments.
                     </p>
 

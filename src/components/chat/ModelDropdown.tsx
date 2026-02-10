@@ -50,7 +50,7 @@ export function ModelDropdown({
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
       {/* Dropdown */}
-      <div className="absolute bottom-full left-0 mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-1.5 min-w-[240px] shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+      <div className="absolute bottom-full left-0 right-0 sm:right-auto mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-1.5 min-w-[240px] sm:w-auto w-full shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 max-h-[60dvh] overflow-y-auto">
         {groups.map((group, gi) => (
           <div key={gi}>
             {group.label && (

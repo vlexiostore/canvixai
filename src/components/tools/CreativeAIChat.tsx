@@ -24,6 +24,18 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   const [selectedMode, setSelectedMode] = useState(isStudio ? null : "general");
   const [conversationId, setConversationId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setSidebarCollapsed(true); // always collapse sidebar on mobile
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Models
   const [selectedModel, setSelectedModel] = useState("gpt-5-mini");
@@ -276,14 +288,19 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     if (isStudio && !messageText && hasImage) {
       const userMsg = { id: Date.now(), type: "user", text: "I uploaded a reference image.", image: uploadedFile, timestamp: new Date() };
       setMessages((prev) => [...prev, userMsg]);
-      setReferenceImage(uploadedFile);
+
+      // Upload reference to get a hosted URL
+      const hostedUrl = await uploadReferenceImage(uploadedFile);
+      setReferenceImage(hostedUrl || uploadedFile);
       setUploadedFile(null);
       setInputValue("");
 
       const refMsg = {
         id: Date.now() + 1,
         type: "assistant",
-        text: "Got your reference image! What would you like to do with it?",
+        text: hostedUrl
+          ? "Got your reference image! What would you like to do with it?"
+          : "I saved your reference image locally. What would you like to do with it?",
         suggestions: ["🎨 Create similar image", "✏️ Edit this image", "🧑 Use as pose reference", "📽️ Animate into video", "🗑️ Remove reference"],
         timestamp: new Date(),
       };
@@ -292,7 +309,10 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     }
 
     if (!messageText && hasImage) messageText = "I uploaded an image for reference.";
-    if (isStudio && hasImage) setReferenceImage(uploadedFile);
+    if (isStudio && hasImage) {
+      const hostedUrl = await uploadReferenceImage(uploadedFile);
+      setReferenceImage(hostedUrl || uploadedFile);
+    }
 
     const userMsg = { id: Date.now(), type: "user", text: messageText, image: hasImage ? uploadedFile : undefined, timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
@@ -368,6 +388,16 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     if (lower.includes("animate into video")) { setSelectedMode("image-to-video"); setSelectedGenModel("veo3.1-fast"); setInputValue("Animate this image into a smooth cinematic video"); return; }
     if (lower.includes("remove reference")) { setReferenceImage(null); setMessages((prev) => [...prev, { id: Date.now(), type: "system", text: "Reference image removed" }]); return; }
 
+    // Download
+    if (lower === "download") {
+      const lastGen = [...messages].reverse().find((m) => m.generatedContent?.url);
+      if (lastGen?.generatedContent) {
+        const ext = lastGen.generatedContent.type === "video" ? "mp4" : "png";
+        handleDownload(lastGen.generatedContent.url, `canvix-${Date.now()}.${ext}`);
+      }
+      return;
+    }
+
     const isGenerate = lower.includes("generate") || lower.includes("try again");
 
     if (isStudio && isGenerate) {
@@ -434,12 +464,49 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     }
   };
 
+  // Upload a base64 data URL to the server and get a hosted URL back
+  const uploadReferenceImage = async (dataUrl) => {
+    try {
+      const res = await fetch("/api/upload/reference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const json = await res.json();
+      if (json.success) return json.data.url;
+      console.error("Reference upload failed:", json.error);
+      return null;
+    } catch (e) {
+      console.error("Reference upload error:", e);
+      return null;
+    }
+  };
+
+  // Helper: download a file from URL
+  const handleDownload = async (url, filename) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename || "canvix-download";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch {
+      // Fallback: open in new tab
+      window.open(url, "_blank");
+    }
+  };
+
   // ─── Sidebar width ─────────────────────────────────────
-  const sidebarWidth = sidebarCollapsed ? 52 : 260;
+  // On mobile, sidebar is an overlay → no margin on main
+  const sidebarWidth = isMobile ? 0 : sidebarCollapsed ? 52 : 260;
 
   // ─── Render ─────────────────────────────────────────────
   return (
-    <div className="flex h-screen bg-[#0a0a0a] text-white font-sans selection:bg-purple-500/30 overflow-hidden">
+    <div className="flex h-[100dvh] bg-[#0a0a0a] text-white font-sans selection:bg-purple-500/30 overflow-hidden">
       <Sidebar
         conversations={conversations}
         activeConversationId={conversationId}
@@ -452,22 +519,22 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       />
 
       <main
-        className="flex-1 flex flex-col h-screen transition-all duration-200"
+        className="flex-1 flex flex-col h-[100dvh] transition-all duration-200"
         style={{ marginLeft: sidebarWidth }}
       >
         {messages.length === 0 ? (
           /* ═══ Welcome / Empty State ═══ */
-          <div className="flex-1 flex flex-col items-center justify-center p-4 pb-8">
-            <div className="text-center mb-10 space-y-4">
-              <h1 className="text-5xl md:text-6xl font-sans font-medium text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">
+          <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-4 pb-6 sm:pb-8">
+            <div className="text-center mb-6 sm:mb-10 space-y-3 sm:space-y-4 mt-12 md:mt-0">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-sans font-medium text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">
                 Canvix
               </h1>
-              <p className="text-xl md:text-2xl font-semibold text-white/80">
+              <p className="text-base sm:text-xl md:text-2xl font-semibold text-white/80 px-4">
                 {isStudio ? "What should we create?" : "Ready when you are."}
               </p>
             </div>
 
-            <div className="w-full px-4">
+            <div className="w-full px-2 sm:px-4">
               <ChatInput
                 value={inputValue}
                 onChange={setInputValue}
@@ -495,14 +562,14 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
         ) : (
           /* ═══ Messages ═══ */
           <>
-            <div className="flex-1 overflow-y-auto">
-              <div className="max-w-[720px] mx-auto px-4 py-6 space-y-6">
+            <div className="flex-1 overflow-y-auto pt-12 md:pt-0">
+              <div className="max-w-[720px] mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
                 {messages.map((msg) => (
                   <div key={msg.id}>
                     {/* User */}
                     {msg.type === "user" && (
-                      <div className="flex justify-end gap-3">
-                        <div className="max-w-[75%]">
+                      <div className="flex justify-end gap-2 sm:gap-3">
+                        <div className="max-w-[85%] sm:max-w-[75%]">
                           {msg.image && (
                             <img src={msg.image} alt="Uploaded" className="max-w-[200px] rounded-xl mb-2 ml-auto" />
                           )}
@@ -518,11 +585,11 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
                     {/* Assistant */}
                     {msg.type === "assistant" && (
-                      <div className="flex gap-3">
-                        <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-500 to-orange-400 flex items-center justify-center text-xs">
+                      <div className="flex gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-500 to-orange-400 flex items-center justify-center text-[10px] sm:text-xs">
                           ✦
                         </div>
-                        <div className="max-w-[80%] space-y-3">
+                        <div className="max-w-[90%] sm:max-w-[80%] space-y-3">
                           {msg.isGenerating ? (
                             <div className="space-y-2">
                               <p className="text-[15px] text-gray-300">{msg.text}</p>
@@ -545,7 +612,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
                               {/* Generated Content */}
                               {msg.generatedContent && (
-                                <div className="rounded-xl overflow-hidden border border-[#2a2a2a]">
+                                <div className="rounded-xl overflow-hidden border border-[#2a2a2a] relative group/media">
                                   {msg.generatedContent.type === "image" ? (
                                     msg.generatedContent.url ? (
                                       <img src={msg.generatedContent.url} alt={msg.generatedContent.prompt || "Generated"} className="w-full max-w-[400px] rounded-xl" />
@@ -558,6 +625,19 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                                     <div className="w-full max-w-[500px] aspect-video bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center">
                                       <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center text-2xl">▶</div>
                                     </div>
+                                  )}
+                                  {/* Download overlay button */}
+                                  {msg.generatedContent.url && (
+                                    <button
+                                      onClick={() => {
+                                        const ext = msg.generatedContent.type === "video" ? "mp4" : "png";
+                                        handleDownload(msg.generatedContent.url, `canvix-${Date.now()}.${ext}`);
+                                      }}
+                                      className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-lg text-white opacity-0 group-hover/media:opacity-100 transition-opacity"
+                                      title="Download"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    </button>
                                   )}
                                 </div>
                               )}
@@ -608,7 +688,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
             </div>
 
             {/* ═══ Input (sticky bottom) ═══ */}
-            <div className="shrink-0 px-4 py-3 bg-[#0a0a0a]">
+            <div className="shrink-0 px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0a0a]">
               <ChatInput
                 value={inputValue}
                 onChange={setInputValue}
@@ -637,7 +717,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
       {/* ═══ Dropdowns (portal-like, positioned above input) ═══ */}
       {showChatModelDropdown && (
-        <div className="fixed z-50" style={{ bottom: 80, left: sidebarWidth + 16, right: 16 }}>
+        <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
           <div className="max-w-[720px] mx-auto relative">
             <ModelDropdown
               options={chatModels}
@@ -650,7 +730,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       )}
 
       {showGenModelDropdown && (
-        <div className="fixed z-50" style={{ bottom: 80, left: sidebarWidth + 16, right: 16 }}>
+        <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
           <div className="max-w-[720px] mx-auto relative">
             <ModelDropdown
               options={allGenModels}
@@ -667,7 +747,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       )}
 
       {showRatioDropdown && (
-        <div className="fixed z-50" style={{ bottom: 80, left: sidebarWidth + 16, right: 16 }}>
+        <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
           <div className="max-w-[720px] mx-auto relative">
             <ModelDropdown
               options={ratioOptions}

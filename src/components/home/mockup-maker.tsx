@@ -7,19 +7,19 @@ import { Box, Smartphone, Monitor, Shirt } from "lucide-react";
 export function MockupMakerSection({ theme }: { theme?: "dark" | "light" }) {
     return (
         <Section id="mockup-maker" className="bg-transparent" theme={theme}>
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-                <div className="flex-1 space-y-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                <div className="flex-1 space-y-4 md:space-y-6">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-amber-500/20 bg-amber-500/5">
                         <Box size={16} className="text-amber-500" />
                         <span className="text-sm text-amber-500 font-medium">Mockup Generator</span>
                     </div>
-                    <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl">
+                    <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
                         Showcase your <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-400">
                             Designs Realistically
                         </span>
                     </h2>
-                    <p className="text-lg opacity-60 leading-relaxed max-w-lg">
+                    <p className="text-base md:text-lg opacity-60 leading-relaxed max-w-lg">
                         Present your designs on real-world products. High-resolution mockups for apparel, devices, print, and packaging in just a click.
                     </p>
 

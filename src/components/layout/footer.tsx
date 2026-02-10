@@ -3,10 +3,10 @@ import { Twitter, Instagram, Youtube, User } from "lucide-react";
 
 export function Footer() {
     return (
-        <footer className="relative z-10 px-6 lg:px-12 py-16 border-t border-white/5 bg-[#0A0A0B]">
+        <footer className="relative z-10 px-5 sm:px-6 lg:px-12 py-10 sm:py-16 border-t border-white/5 bg-[#0A0A0B]">
             <div className="max-w-7xl mx-auto">
-                <div className="grid md:grid-cols-5 gap-12 mb-12">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-8 md:gap-12 mb-10 md:mb-12">
+                    <div className="col-span-2 sm:col-span-2 md:col-span-2">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-orange to-brand-pink flex items-center justify-center">
                                 <span className="text-white font-bold text-xl">C</span>

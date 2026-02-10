@@ -78,17 +78,17 @@ export function ChatInput({
     <div className="w-full max-w-[720px] mx-auto relative group">
       {/* Reference Image Indicator */}
       {isStudio && referenceImage && !uploadedFile && (
-        <div className="flex items-center gap-3 mb-2 px-4 py-2 bg-orange-500/5 border border-orange-500/15 rounded-xl">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 px-3 sm:px-4 py-2 bg-orange-500/5 border border-orange-500/15 rounded-xl">
           <img
             src={referenceImage}
             alt="Reference"
-            className="w-9 h-9 object-cover rounded-lg"
+            className="w-8 h-8 sm:w-9 sm:h-9 object-cover rounded-lg"
           />
           <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold text-orange-400">
               Reference image active
             </div>
-            <div className="text-[11px] text-gray-500">
+            <div className="text-[10px] sm:text-[11px] text-gray-500">
               Will be used for next generation
             </div>
           </div>
@@ -105,12 +105,12 @@ export function ChatInput({
       <div className="relative bg-[#1a1a1a] border border-[#333] rounded-2xl overflow-hidden transition-colors focus-within:border-[#444]">
         {/* Upload Preview */}
         {uploadedFile && (
-          <div className="px-4 pt-3">
+          <div className="px-3 sm:px-4 pt-3">
             <div className="relative inline-block">
               <img
                 src={uploadedFile}
                 alt="Upload"
-                className="w-16 h-16 object-cover rounded-xl"
+                className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl"
               />
               <button
                 onClick={onRemoveUpload}
@@ -128,22 +128,22 @@ export function ChatInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full bg-transparent text-white placeholder-gray-500 px-4 pt-4 pb-14 min-h-[56px] max-h-[200px] resize-none focus:outline-none text-[15px] leading-relaxed"
+          className="w-full bg-transparent text-white placeholder-gray-500 px-3 sm:px-4 pt-3 sm:pt-4 pb-14 min-h-[52px] sm:min-h-[56px] max-h-[200px] resize-none focus:outline-none text-sm sm:text-[15px] leading-relaxed"
           rows={1}
         />
 
         {/* Bottom Actions Bar */}
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap min-w-0 overflow-hidden">
             {/* Upload (studio only) */}
             {isStudio && (
               <>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-gray-500 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg"
+                  className="p-1.5 sm:p-2 text-gray-500 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg shrink-0"
                   title="Upload image"
                 >
-                  <ImagePlus size={18} />
+                  <ImagePlus size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
                 <input
                   ref={fileInputRef}
@@ -159,22 +159,22 @@ export function ChatInput({
             {isStudio && onRatioClick && (
               <button
                 onClick={onRatioClick}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium"
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
               >
                 <span>{ratioLabel}</span>
-                <ChevronDown size={12} />
+                <ChevronDown size={10} className="sm:w-3 sm:h-3" />
               </button>
             )}
 
-            {/* Gen Model (studio only) */}
+            {/* Gen Model (studio only) — hide label on very small screens */}
             {isStudio && onGenModelClick && (
               <button
                 onClick={onGenModelClick}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium"
+                className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
               >
                 <span>{genModelIcon}</span>
-                <span>{genModelLabel}</span>
-                <ChevronDown size={12} />
+                <span className="hidden xs:inline sm:inline">{genModelLabel}</span>
+                <ChevronDown size={10} className="sm:w-3 sm:h-3" />
               </button>
             )}
 
@@ -182,11 +182,11 @@ export function ChatInput({
             {onChatModelClick && (
               <button
                 onClick={onChatModelClick}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium"
+                className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
               >
-                <Sparkles size={12} />
-                <span>{chatModelLabel}</span>
-                <ChevronDown size={12} />
+                <Sparkles size={10} className="sm:w-3 sm:h-3" />
+                <span className="hidden xs:inline sm:inline">{chatModelLabel}</span>
+                <ChevronDown size={10} className="sm:w-3 sm:h-3" />
               </button>
             )}
           </div>
@@ -195,9 +195,9 @@ export function ChatInput({
           <button
             onClick={onSend}
             disabled={disabled || (!value.trim() && !uploadedFile)}
-            className="p-2 bg-purple-600 text-white hover:bg-purple-500 disabled:bg-[#2a2a2a] disabled:text-gray-500 transition-colors rounded-full disabled:cursor-not-allowed"
+            className="p-1.5 sm:p-2 bg-purple-600 text-white hover:bg-purple-500 disabled:bg-[#2a2a2a] disabled:text-gray-500 transition-colors rounded-full disabled:cursor-not-allowed shrink-0"
           >
-            <ArrowUp size={18} />
+            <ArrowUp size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>

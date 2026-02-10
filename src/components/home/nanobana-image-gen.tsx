@@ -7,19 +7,19 @@ import { Sparkles, Wand2, Zap } from "lucide-react";
 export function NanobanaImageGenSection({ theme }: { theme?: "dark" | "light" }) {
     return (
         <Section id="nanobana-image-gen" className="bg-transparent" theme={theme}>
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-                <div className="flex-1 space-y-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                <div className="flex-1 space-y-4 md:space-y-6">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-brand-orange/20 bg-brand-orange/5">
                         <Zap size={16} className="text-brand-orange" />
                         <span className="text-sm text-brand-orange font-medium">Nanobana Image Gen</span>
                     </div>
-                    <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl">
+                    <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
                         Unleash Creativity with <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-orange to-brand-pink">
                             Nanobana AI
                         </span>
                     </h2>
-                    <p className="text-lg opacity-60 leading-relaxed max-w-lg">
+                    <p className="text-base md:text-lg opacity-60 leading-relaxed max-w-lg">
                         Experience the next evolution of image generation. Nanobana's advanced algorithms create stunning, high-fidelity visuals from your wildest ideas in seconds.
                     </p>
 
