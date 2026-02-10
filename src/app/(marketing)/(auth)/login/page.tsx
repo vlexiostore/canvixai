@@ -4,8 +4,52 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Github } from "lucide-react";
+import { SignIn, useAuth } from "@clerk/nextjs";
+
+const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+const hasClerk = clerkPub.startsWith("pk_") && clerkPub.length > 10;
 
 export default function LoginPage() {
+    // If Clerk is enabled, use Clerk's SignIn component
+    if (hasClerk) {
+        return (
+            <div className="py-8">
+                <div className="mb-6">
+                    <h1 className="font-display font-bold text-4xl mb-3">Welcome Back</h1>
+                    <p className="text-black/50 text-base">Sign in to continue creating.</p>
+                </div>
+                <SignIn
+                    routing="hash"
+                    appearance={{
+                        elements: {
+                            rootBox: "w-full",
+                            card: "shadow-none p-0 w-full bg-transparent",
+                            headerTitle: "hidden",
+                            headerSubtitle: "hidden",
+                            socialButtonsBlockButton: "border border-black/10 rounded-xl py-3 hover:bg-gray-50",
+                            formButtonPrimary: "bg-black hover:bg-gray-900 rounded-xl py-3 text-base font-bold",
+                            formFieldInput: "bg-gray-50 border border-black/10 rounded-xl px-5 py-4 focus:border-black focus:ring-1 focus:ring-black",
+                            footerActionLink: "text-black font-bold hover:text-purple-600",
+                            formFieldLabel: "text-sm font-semibold text-black/70",
+                        },
+                    }}
+                    fallbackRedirectUrl="/dashboard"
+                />
+                <div className="mt-6 text-center text-sm text-black/50">
+                    Don&apos;t have an account?{" "}
+                    <Link href="/signup" className="text-black hover:text-brand-orange font-bold transition-colors">
+                        Sign Up
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    // Fallback: local auth when Clerk is not configured
+    return <LocalLoginForm />;
+}
+
+function LocalLoginForm() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -32,7 +76,6 @@ export default function LoginPage() {
                 return;
             }
 
-            // Store user info and redirect immediately
             localStorage.setItem("canvix_user", JSON.stringify(json.data));
             router.replace("/dashboard");
         } catch {

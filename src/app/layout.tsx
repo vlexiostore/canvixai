@@ -33,7 +33,7 @@ export default function RootLayout({
   );
 
   if (hasClerk) {
-    return <ClerkProvider>{content}</ClerkProvider>;
+    return <ClerkProvider publishableKey={clerkPub}>{content}</ClerkProvider>;
   }
 
   return content;
