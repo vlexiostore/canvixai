@@ -84,7 +84,12 @@ export default function DashboardPage() {
     }, []);
 
     // ── Real data from API ──
-    const [user, setUser] = useState({ name: 'User', email: '', plan: 'FREE', credits: { used: 0, total: 50 } });
+    const [user, setUser] = useState({
+        name: 'User', email: '', plan: 'FREE',
+        credits: { used: 0, total: 50 },
+        imageCredits: 50, imageCreditsUsed: 0,
+        videoCredits: 0, videoCreditsUsed: 0,
+    });
     const [projects, setProjects] = useState<{ id: string | number; name: string; images: number; updated: string; starred: boolean }[]>([]);
     const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
     const [recentMedia, setRecentMedia] = useState<LibraryItem[]>([]);
@@ -97,12 +102,17 @@ export default function DashboardPage() {
             const res = await fetch('/api/credits/balance');
             const json = await res.json();
             if (json.success) {
+                const d = json.data;
                 setUser(prev => ({
                     ...prev,
-                    name: json.data.name || prev.name,
-                    email: json.data.email || prev.email,
-                    plan: json.data.plan?.toUpperCase() || prev.plan,
-                    credits: { used: json.data.used, total: json.data.used + json.data.balance },
+                    name: d.name || prev.name,
+                    email: d.email || prev.email,
+                    plan: d.plan?.toUpperCase() || prev.plan,
+                    credits: { used: d.used, total: d.used + d.balance },
+                    imageCredits: d.imageCredits ?? prev.imageCredits,
+                    imageCreditsUsed: d.imageCreditsUsed ?? 0,
+                    videoCredits: d.videoCredits ?? prev.videoCredits,
+                    videoCreditsUsed: d.videoCreditsUsed ?? 0,
                 }));
             }
         } catch { /* fallback */ }
@@ -168,9 +178,12 @@ export default function DashboardPage() {
         } catch { window.open(url, "_blank"); }
     };
 
+    const imgRemaining = user.imageCredits - user.imageCreditsUsed;
+    const vidRemaining = user.videoCredits - user.videoCreditsUsed;
+
     const stats = [
-        { label: 'Projects', value: String(projects.length), change: '', icon: Folder },
-        { label: 'Credits Used', value: String(user.credits.used), change: `${user.credits.total - user.credits.used} remaining`, icon: Sparkles },
+        { label: 'Image Credits', value: imgRemaining.toLocaleString(), change: `of ${user.imageCredits.toLocaleString()}`, icon: ImageIcon },
+        { label: 'Video Credits', value: vidRemaining.toLocaleString(), change: `of ${user.videoCredits.toLocaleString()}`, icon: Video },
         { label: 'Plan', value: user.plan, change: '', icon: Star },
         { label: 'Library', value: String(recentMedia.length || libraryItems.length), change: '', icon: Library },
     ];
@@ -255,9 +268,19 @@ export default function DashboardPage() {
                             <div className="text-[10px] text-white/40">{user.plan} Plan</div>
                         </div>
                     </div>
-                    <div className="text-[10px] text-white/40 flex justify-between mb-1"><span>Credits</span><span>{user.credits.total - user.credits.used} left</span></div>
-                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-purple-500 to-orange-400 rounded-full" style={{ width: `${Math.min((user.credits.used / Math.max(user.credits.total, 1)) * 100, 100)}%` }} />
+                    <div className="space-y-1.5">
+                        <div>
+                            <div className="text-[10px] text-white/40 flex justify-between mb-0.5"><span>Image</span><span>{(user.imageCredits - user.imageCreditsUsed).toLocaleString()} left</span></div>
+                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full" style={{ width: `${Math.min((user.imageCreditsUsed / Math.max(user.imageCredits, 1)) * 100, 100)}%` }} />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] text-white/40 flex justify-between mb-0.5"><span>Video</span><span>{(user.videoCredits - user.videoCreditsUsed).toLocaleString()} left</span></div>
+                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full" style={{ width: `${Math.min((user.videoCreditsUsed / Math.max(user.videoCredits, 1)) * 100, 100)}%` }} />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -318,7 +341,7 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="mt-3 flex items-center justify-between text-xs">
                                                 <span className="text-white/40">{user.plan} Plan</span>
-                                                <span className="text-purple-400 font-medium">{user.credits.total - user.credits.used} credits</span>
+                                                <span className="text-purple-400 font-medium">{(user.imageCredits - user.imageCreditsUsed).toLocaleString()} img · {(user.videoCredits - user.videoCreditsUsed).toLocaleString()} vid</span>
                                             </div>
                                         </div>
 
@@ -572,14 +595,25 @@ export default function DashboardPage() {
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <div className="font-bold">{user.plan} Plan</div>
-                                                    <div className="text-sm text-white/40">{user.credits.total - user.credits.used} credits remaining</div>
+                                                    <div className="text-sm text-white/40">{(user.imageCredits - user.imageCreditsUsed).toLocaleString()} image · {(user.videoCredits - user.videoCreditsUsed).toLocaleString()} video credits remaining</div>
                                                 </div>
-                                                <Link href="/pricing" className="px-4 py-2 bg-white text-black rounded-full text-xs font-bold hover:bg-gray-200 transition-colors">Upgrade</Link>
+                                                <div className="flex gap-2">
+                                                    <Link href="/redeem" className="px-4 py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full text-xs font-bold hover:bg-purple-500/30 transition-colors">Redeem</Link>
+                                                    <Link href="/pricing" className="px-4 py-2 bg-white text-black rounded-full text-xs font-bold hover:bg-gray-200 transition-colors">Upgrade</Link>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="flex justify-between text-xs text-white/40 mb-1"><span>Usage</span><span>{user.credits.used} / {user.credits.total}</span></div>
-                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-gradient-to-r from-purple-500 to-orange-400 rounded-full transition-all" style={{ width: `${Math.min((user.credits.used / Math.max(user.credits.total, 1)) * 100, 100)}%` }} />
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <div className="flex justify-between text-xs text-white/40 mb-1"><span>Image Credits</span><span>{user.imageCreditsUsed.toLocaleString()} / {user.imageCredits.toLocaleString()}</span></div>
+                                                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all" style={{ width: `${Math.min((user.imageCreditsUsed / Math.max(user.imageCredits, 1)) * 100, 100)}%` }} />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs text-white/40 mb-1"><span>Video Credits</span><span>{user.videoCreditsUsed.toLocaleString()} / {user.videoCredits.toLocaleString()}</span></div>
+                                                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full transition-all" style={{ width: `${Math.min((user.videoCreditsUsed / Math.max(user.videoCredits, 1)) * 100, 100)}%` }} />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

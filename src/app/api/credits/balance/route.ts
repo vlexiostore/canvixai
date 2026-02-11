@@ -13,6 +13,11 @@ export async function GET() {
       plan: user.plan,
       name: user.name || undefined,
       email: user.email || undefined,
+      imageCredits: user.imageCredits ?? user.creditsBalance,
+      imageCreditsUsed: user.imageCreditsUsed ?? 0,
+      videoCredits: user.videoCredits ?? 0,
+      videoCreditsUsed: user.videoCreditsUsed ?? 0,
+      planActivatedAt: user.planActivatedAt || undefined,
     });
   } catch (error) {
     return errorResponse(error as Error);

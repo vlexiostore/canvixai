@@ -3,7 +3,24 @@
 // ============================
 
 // ---------- User ----------
-export type UserPlan = "free" | "starter" | "pro" | "business";
+export type UserPlan = "free" | "basic" | "pro" | "ultimate";
+
+// ---------- Plan Definitions ----------
+export interface PlanDefinition {
+  name: string;
+  imageCredits: number;
+  videoCredits: number;
+  chatUnlimited: boolean;
+  bgRemove: boolean;
+  premiumSupport: boolean;
+}
+
+export const PLAN_DEFINITIONS: Record<UserPlan, PlanDefinition> = {
+  free: { name: "Free", imageCredits: 50, videoCredits: 0, chatUnlimited: false, bgRemove: false, premiumSupport: false },
+  basic: { name: "Basic", imageCredits: 3500, videoCredits: 2000, chatUnlimited: true, bgRemove: true, premiumSupport: true },
+  pro: { name: "Pro", imageCredits: 8000, videoCredits: 4000, chatUnlimited: true, bgRemove: true, premiumSupport: true },
+  ultimate: { name: "Ultimate", imageCredits: 50000, videoCredits: 25000, chatUnlimited: true, bgRemove: true, premiumSupport: true },
+};
 
 // ---------- Jobs ----------
 export type JobType =

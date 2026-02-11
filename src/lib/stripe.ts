@@ -13,28 +13,28 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-// Credit packages
+// Credit packages (plans activated via coupon; these are for additional credit top-ups)
 export const CREDIT_PACKAGES = [
   {
-    id: "starter",
-    name: "Starter",
-    credits: 100,
+    id: "basic",
+    name: "Basic Top-Up",
+    credits: 500,
     price: 999, // in cents
-    description: "100 credits",
+    description: "500 image credits top-up",
   },
   {
     id: "pro",
-    name: "Pro",
-    credits: 500,
-    price: 3999,
-    description: "500 credits",
+    name: "Pro Top-Up",
+    credits: 2000,
+    price: 2999,
+    description: "2,000 image credits top-up",
   },
   {
-    id: "business",
-    name: "Business",
-    credits: 2000,
-    price: 14999,
-    description: "2,000 credits",
+    id: "ultimate",
+    name: "Ultimate Top-Up",
+    credits: 5000,
+    price: 5999,
+    description: "5,000 image credits top-up",
   },
 ] as const;
 

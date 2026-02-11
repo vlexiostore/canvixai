@@ -9,7 +9,14 @@ export interface IUser extends Document {
   plan: UserPlan;
   creditsBalance: number;
   creditsUsed: number;
+  imageCredits: number;
+  imageCreditsUsed: number;
+  videoCredits: number;
+  videoCreditsUsed: number;
   stripeCustomerId?: string;
+  planActivatedAt?: Date;
+  planExpiresAt?: Date;
+  redeemedCoupons: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,12 +29,19 @@ const UserSchema = new Schema<IUser>(
     avatarUrl: { type: String },
     plan: {
       type: String,
-      enum: ["free", "starter", "pro", "business"],
+      enum: ["free", "basic", "pro", "ultimate"],
       default: "free",
     },
     creditsBalance: { type: Number, default: 50 },
     creditsUsed: { type: Number, default: 0 },
+    imageCredits: { type: Number, default: 50 },
+    imageCreditsUsed: { type: Number, default: 0 },
+    videoCredits: { type: Number, default: 0 },
+    videoCreditsUsed: { type: Number, default: 0 },
     stripeCustomerId: { type: String },
+    planActivatedAt: { type: Date },
+    planExpiresAt: { type: Date },
+    redeemedCoupons: [{ type: String }],
   },
   { timestamps: true }
 );

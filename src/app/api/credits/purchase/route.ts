@@ -6,7 +6,7 @@ import { createCheckoutSession, CREDIT_PACKAGES } from "@/lib/stripe";
 import { errorResponse, successResponse, APIError, ErrorCodes } from "@/lib/errors";
 
 const requestSchema = z.object({
-  packageId: z.enum(["starter", "pro", "business"]),
+  packageId: z.enum(["basic", "pro", "ultimate"]),
 });
 
 export async function POST(req: NextRequest) {

@@ -9,72 +9,59 @@ import { MockupMakerSection } from "@/components/home/mockup-maker";
 import { RealisticGenSection } from "@/components/home/realistic-gen";
 import { TeamSection } from "@/components/home/team";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
+import { GooeyText } from "@/components/ui/gooey-text-morphing";
 
-const Aurora = dynamic(() => import("@/components/Aurora"), { ssr: false });
-const HeroShutterText = dynamic(() => import("@/components/ui/hero-shutter-text"), { ssr: false });
 const InfiniteShowcase = dynamic(
   () => import("@/components/ui/argent-loop-infinite-slider").then((m) => ({ default: m.InfiniteShowcase })),
   { ssr: false }
 );
 
+const AnimatedMarqueeHero = dynamic(
+  () => import("@/components/ui/hero-3").then((m) => ({ default: m.AnimatedMarqueeHero })),
+  { ssr: false }
+);
+
+const HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1572495641004-28421ae52e52?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=900&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=900&auto=format&fit=crop",
+];
+
 export default function HomePage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative z-10 overflow-hidden bg-[#0A0A0B] text-white min-h-[100dvh] flex items-center justify-center px-5 sm:px-6">
-        {/* Aurora background */}
-        <div className="absolute inset-0 z-0">
-          <Aurora
-            colorStops={["#9429ff", "#dbdbdb", "#312b88"]}
-            amplitude={1}
-            blend={0.5}
+      <AnimatedMarqueeHero
+        tagline=""
+        preTitle={
+          <GooeyText
+            texts={["AI Images", "AI Videos", "BG Removal", "Editing", "Upscaling"]}
+            morphTime={1}
+            cooldownTime={0.25}
+            className="h-[50px] sm:h-[65px] md:h-[85px] w-full mb-0"
+            textClassName="text-4xl sm:text-5xl md:text-7xl font-display font-bold tracking-tighter text-white"
           />
-        </div>
-
-        <div className="max-w-7xl mx-auto relative z-10 w-full">
-          <div className="text-center relative">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full glass mb-6 sm:mb-8 border border-white/10 hover:border-brand-orange/50 transition-colors cursor-default">
-              <span className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
-              <span className="text-xs sm:text-sm text-white/70">Canvix ultra is Live</span>
-            </div>
-
-            {/* Headline — shutter text animation */}
-            <div className="mb-2 sm:mb-4">
-              <HeroShutterText
-                text="Create instant masterpieces"
-                accentClassName="text-black-500"
-              />
-            </div>
-            <p className="font-display font-bold text-lg sm:text-2xl md:text-3xl text-white/60 tracking-wide mb-3 sm:mb-6">
-              Get Started now
-            </p>
-
-            {/* Subheadline */}
-            <p className="text-base sm:text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
-              The all-in-one AI creative suite. BG removal, Image Gen, Video, and Editing.
-              <span className="text-white"> No credit card required.</span>
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-10 sm:mb-20">
-              <Link
-                href="/signup"
-                className="group relative w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-black text-white border border-white/20 rounded-full text-lg sm:text-xl font-bold overflow-hidden transition-all hover:bg-white hover:text-black hover:scale-105 active:scale-95 shadow-lg hover:shadow-white/20 text-center"
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  Start Creating Free <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
-                </span>
-              </Link>
-              <button className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 rounded-full text-base sm:text-lg font-medium glass hover:bg-white/10 transition-all flex items-center justify-center gap-2 border border-white/10 text-white">
-                View Gallery
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+        }
+        title={
+          <>
+            Create Instant
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
+              Masterpieces
+            </span>
+          </>
+        }
+        description="The all-in-one AI creative suite. Image generation, video creation, background removal, and editing — no credit card required."
+        ctaText="Start Creating Free"
+        ctaHref="/signup"
+        images={HERO_IMAGES}
+      />
 
       {/* Showcase Slider */}
       <section className="relative z-10">
