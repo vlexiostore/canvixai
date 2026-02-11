@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     // Check credits
     const cost = getCreditCost("chat");
-    if (!(await checkCredits(user._id, cost))) {
+    if (!(await checkCredits(user._id, cost, "chat"))) {
       throw new APIError(ErrorCodes.INSUFFICIENT_CREDITS, "Not enough credits", 402);
     }
 

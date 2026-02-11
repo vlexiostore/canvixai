@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const data = requestSchema.parse(body);
 
     const cost = getCreditCost("upscale");
-    if (!(await checkCredits(user._id, cost))) {
+    if (!(await checkCredits(user._id, cost, "upscale"))) {
       throw new APIError(ErrorCodes.INSUFFICIENT_CREDITS, "Not enough credits", 402);
     }
 

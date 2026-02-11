@@ -44,13 +44,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = requestSchema.parse(body);
 
-    // Validate model
-    const model = VALID_VIDEO_MODEL_IDS.includes(data.model as any)
+    const hasRefs = data.imageUrls && data.imageUrls.length > 0;
+
+    // Validate model — if reference images are provided, force wan2.6 (image-to-video support)
+    let model = VALID_VIDEO_MODEL_IDS.includes(data.model as any)
       ? data.model
       : DEFAULT_VIDEO_MODEL;
 
-    const cost = getCreditCost("video-gen");
-    if (!(await checkCredits(user._id, cost))) {
+    if (hasRefs && model === "veo3.1-fast") {
+      model = "wan2.6"; // veo3 doesn't support image refs
+    }
+
+    // Determine job type for credits
+    const jobType = hasRefs ? "image-to-video" : "video-gen";
+    const cost = getCreditCost(jobType);
+    if (!(await checkCredits(user._id, cost, jobType))) {
       throw new APIError(
         ErrorCodes.INSUFFICIENT_CREDITS,
         "Not enough credits",
@@ -62,7 +70,7 @@ export async function POST(req: NextRequest) {
     const duration =
       model.startsWith("veo3") ? 8 : data.duration;
 
-    // Submit to APIMart
+    // Submit to APIMart (retry logic built-in for 429)
     const { taskId } = await submitVideoGeneration({
       model,
       prompt: data.prompt,
@@ -75,16 +83,18 @@ export async function POST(req: NextRequest) {
     // Create job as processing
     const job = await Job.create({
       userId: user._id,
-      type: "video-gen",
+      type: jobType,
       status: "processing",
       inputData: {
         prompt: data.prompt,
+        imageUrl: hasRefs ? data.imageUrls![0] : undefined,
         settings: {
           model,
           duration,
           resolution: data.resolution,
           aspectRatio: data.aspectRatio,
           style: data.style,
+          imageRefs: hasRefs ? data.imageUrls!.length : 0,
         },
       },
       pixlrJobId: taskId,
@@ -93,13 +103,13 @@ export async function POST(req: NextRequest) {
     });
 
     // Deduct credits immediately
-    await deductCredits(user._id, "video-gen", job._id);
+    await deductCredits(user._id, jobType, job._id);
 
     return successResponse({
       jobId: job._id.toString(),
       status: "processing",
       taskId,
-      estimatedTime: 60,
+      estimatedTime: hasRefs ? 90 : 60,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -107,6 +117,19 @@ export async function POST(req: NextRequest) {
         new APIError(ErrorCodes.INVALID_INPUT, "Invalid input", 400, error.issues)
       );
     }
+
+    // Provide friendlier message for rate-limit errors from upstream
+    const errMsg = (error as Error)?.message || "";
+    if (errMsg.includes("429") || errMsg.includes("throttled") || errMsg.includes("rate limit")) {
+      return errorResponse(
+        new APIError(
+          ErrorCodes.RATE_LIMITED,
+          "Generation service is busy. Please wait a moment and try again.",
+          429
+        )
+      );
+    }
+
     return errorResponse(error as Error);
   }
 }

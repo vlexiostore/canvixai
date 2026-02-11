@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       : DEFAULT_IMAGE_MODEL;
 
     const cost = getCreditCost("image-gen");
-    if (!(await checkCredits(user._id, cost))) {
+    if (!(await checkCredits(user._id, cost, "image-gen"))) {
       throw new APIError(
         ErrorCodes.INSUFFICIENT_CREDITS,
         "Not enough credits",
@@ -116,6 +116,19 @@ export async function POST(req: NextRequest) {
         new APIError(ErrorCodes.INVALID_INPUT, "Invalid input", 400, error.issues)
       );
     }
+
+    // Provide friendlier message for rate-limit errors from upstream
+    const errMsg = (error as Error)?.message || "";
+    if (errMsg.includes("429") || errMsg.includes("throttled") || errMsg.includes("rate limit")) {
+      return errorResponse(
+        new APIError(
+          ErrorCodes.RATE_LIMITED,
+          "Generation service is busy. Please wait a moment and try again.",
+          429
+        )
+      );
+    }
+
     return errorResponse(error as Error);
   }
 }

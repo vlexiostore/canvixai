@@ -41,7 +41,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   const [selectedModel, setSelectedModel] = useState("gpt-5-mini");
   // Generation models — separate for image and video
   const [selectedImageModel, setSelectedImageModel] = useState("gemini-2.5-flash-image-preview");
-  const [selectedVideoModel, setSelectedVideoModel] = useState("veo3.1-fast");
+  const [selectedVideoModel, setSelectedVideoModel] = useState("wan2.6");
   const [selectedRatio, setSelectedRatio] = useState("1:1");
   // Generation mode toggle (studio only)
   const [generationMode, setGenerationMode] = useState("image");
@@ -73,8 +73,8 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   ];
 
   const videoGenModels = [
-    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, up to 4K", icon: "🎬" },
-    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, audio", icon: "🎥" },
+    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, image-to-video, audio", icon: "🎥" },
+    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, text-to-video only", icon: "🎬" },
   ];
 
   const currentImageModel = imageGenModels.find((m) => m.id === selectedImageModel) || imageGenModels[0];
@@ -241,7 +241,14 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       });
 
       const json = await res.json();
-      if (!json.success) return { success: false, error: json.error?.message || "Generation failed" };
+      if (!json.success) {
+        const errMsg = json.error?.message || "Generation failed";
+        // If rate-limited, give user a helpful hint
+        if (errMsg.includes("busy") || errMsg.includes("rate") || errMsg.includes("429") || errMsg.includes("throttled")) {
+          return { success: false, error: "The generation service is busy right now. Please wait ~10 seconds and try again." };
+        }
+        return { success: false, error: errMsg };
+      }
 
       if (json.data.status === "completed" && json.data.result?.url) {
         return { success: true, type, url: json.data.result.url, prompt };

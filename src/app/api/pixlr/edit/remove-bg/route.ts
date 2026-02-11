@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const data = requestSchema.parse(body);
 
     const cost = getCreditCost("remove-bg");
-    if (!(await checkCredits(user._id, cost))) {
+    if (!(await checkCredits(user._id, cost, "remove-bg"))) {
       throw new APIError(ErrorCodes.INSUFFICIENT_CREDITS, "Not enough credits", 402);
     }
 

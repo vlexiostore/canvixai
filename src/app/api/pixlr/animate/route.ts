@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const data = requestSchema.parse(body);
 
     const cost = getCreditCost("image-to-video");
-    if (!(await checkCredits(user._id, cost))) {
+    if (!(await checkCredits(user._id, cost, "image-to-video"))) {
       throw new APIError(ErrorCodes.INSUFFICIENT_CREDITS, "Not enough credits", 402);
     }
 
