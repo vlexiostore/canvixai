@@ -12,8 +12,12 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 
-// Aurora is lightweight (OGL-based) — safe for all screen sizes
 const Aurora = dynamic(() => import("@/components/Aurora"), { ssr: false });
+const HeroShutterText = dynamic(() => import("@/components/ui/hero-shutter-text"), { ssr: false });
+const InfiniteShowcase = dynamic(
+  () => import("@/components/ui/argent-loop-infinite-slider").then((m) => ({ default: m.InfiniteShowcase })),
+  { ssr: false }
+);
 
 export default function HomePage() {
   return (
@@ -34,16 +38,19 @@ export default function HomePage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full glass mb-6 sm:mb-8 border border-white/10 hover:border-brand-orange/50 transition-colors cursor-default">
               <span className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
-              <span className="text-xs sm:text-sm text-white/70">Canvix 2.0 is here</span>
+              <span className="text-xs sm:text-sm text-white/70">Canvix ultra is Live</span>
             </div>
 
-            {/* Headline */}
-            <h1 className="font-display font-extrabold text-[2.75rem] sm:text-6xl md:text-7xl lg:text-9xl tracking-tight leading-[0.9] mb-5 sm:mb-8">
-              <span className="block">Create instant</span>
-              <span className="block mt-1 sm:mt-2 text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50">
-                masterpieces
-              </span>
-            </h1>
+            {/* Headline — shutter text animation */}
+            <div className="mb-2 sm:mb-4">
+              <HeroShutterText
+                text="Create instant masterpieces"
+                accentClassName="text-black-500"
+              />
+            </div>
+            <p className="font-display font-bold text-lg sm:text-2xl md:text-3xl text-white/60 tracking-wide mb-3 sm:mb-6">
+              Get Started now
+            </p>
 
             {/* Subheadline */}
             <p className="text-base sm:text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
@@ -67,6 +74,11 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Showcase Slider */}
+      <section className="relative z-10">
+        <InfiniteShowcase />
       </section>
 
       {/* Feature Sections */}
