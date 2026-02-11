@@ -10,9 +10,9 @@ const requests = new Map<string, RateLimitEntry>();
 
 const LIMITS: Record<UserPlan, { requests: number; windowMs: number }> = {
   free: { requests: 10, windowMs: 60_000 },
-  starter: { requests: 30, windowMs: 60_000 },
+  basic: { requests: 30, windowMs: 60_000 },
   pro: { requests: 60, windowMs: 60_000 },
-  business: { requests: 200, windowMs: 60_000 },
+  ultimate: { requests: 200, windowMs: 60_000 },
 };
 
 /**
