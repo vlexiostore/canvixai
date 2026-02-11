@@ -7,10 +7,10 @@ import { SuggestionCards } from "@/components/chat/SuggestionCards";
 import { ModelDropdown } from "@/components/chat/ModelDropdown";
 
 /**
- * Canvix AI Chat — GPT-style interface
+ * Canvix AI — dual-purpose interface
  *
- * pageMode="chat"   → General AI chat only. No image/video generation.
- * pageMode="studio" → Full creative studio: image & video generation + chat.
+ * pageMode="chat"   → General AI chat only. No image/video generation. Chat model selector shown.
+ * pageMode="studio" → Direct generation: user types prompt → generates image/video. NO chat. No GPT model selector.
  */
 export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitchMode }) {
   const isStudio = pageMode === "studio";
@@ -21,7 +21,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [referenceImage, setReferenceImage] = useState(null);
-  const [selectedMode, setSelectedMode] = useState(isStudio ? null : "general");
+  const [selectedMode, setSelectedMode] = useState(isStudio ? "image" : "general");
   const [conversationId, setConversationId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -30,21 +30,26 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     const check = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (mobile) setSidebarCollapsed(true); // always collapse sidebar on mobile
+      if (mobile) setSidebarCollapsed(true);
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Models
+  // Models — Chat (only used in chat mode)
   const [selectedModel, setSelectedModel] = useState("gpt-5-mini");
-  const [selectedGenModel, setSelectedGenModel] = useState("gemini-2.5-flash-image-preview");
+  // Generation models — separate for image and video
+  const [selectedImageModel, setSelectedImageModel] = useState("gemini-2.5-flash-image-preview");
+  const [selectedVideoModel, setSelectedVideoModel] = useState("veo3.1-fast");
   const [selectedRatio, setSelectedRatio] = useState("1:1");
+  // Generation mode toggle (studio only)
+  const [generationMode, setGenerationMode] = useState("image");
 
   // Dropdowns
   const [showChatModelDropdown, setShowChatModelDropdown] = useState(false);
-  const [showGenModelDropdown, setShowGenModelDropdown] = useState(false);
+  const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
+  const [showVideoModelDropdown, setShowVideoModelDropdown] = useState(false);
   const [showRatioDropdown, setShowRatioDropdown] = useState(false);
 
   // History
@@ -62,19 +67,18 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   ];
 
   const imageGenModels = [
-    { id: "gemini-2.5-flash-image-preview", label: "Canvix Flash", description: "Fast image gen", icon: "⚡", type: "image" },
-    { id: "gemini-3-pro-image-preview", label: "Canvix Pro", description: "High quality", icon: "✨", type: "image" },
-    { id: "doubao-seedance-4-5", label: "Canvix HD", description: "Ultra HD", icon: "💎", type: "image" },
+    { id: "gemini-2.5-flash-image-preview", label: "Canvix Flash", description: "Fast image gen", icon: "⚡" },
+    { id: "gemini-3-pro-image-preview", label: "Canvix Pro", description: "High quality", icon: "✨" },
+    { id: "doubao-seedance-4-5", label: "Canvix HD", description: "Ultra HD", icon: "💎" },
   ];
 
   const videoGenModels = [
-    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, up to 4K", icon: "🎬", type: "video" },
-    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, audio", icon: "🎥", type: "video" },
+    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, up to 4K", icon: "🎬" },
+    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, audio", icon: "🎥" },
   ];
 
-  const allGenModels = [...imageGenModels, ...videoGenModels];
-  const videoModelIds = new Set(videoGenModels.map((m) => m.id));
-  const currentGenModel = allGenModels.find((m) => m.id === selectedGenModel) || allGenModels[0];
+  const currentImageModel = imageGenModels.find((m) => m.id === selectedImageModel) || imageGenModels[0];
+  const currentVideoModel = videoGenModels.find((m) => m.id === selectedVideoModel) || videoGenModels[0];
   const currentChatModel = chatModels.find((m) => m.id === selectedModel) || chatModels[2];
 
   const ratioOptions = [
@@ -89,14 +93,11 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Load conversation list
   const loadConversations = useCallback(async () => {
     try {
       const res = await fetch("/api/conversations");
       const json = await res.json();
-      if (json.success) {
-        setConversations(json.data || []);
-      }
+      if (json.success) setConversations(json.data || []);
     } catch (e) {
       console.error("Failed to load conversations:", e);
     }
@@ -106,7 +107,6 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     loadConversations();
   }, [loadConversations]);
 
-  // Load a specific conversation
   const loadConversation = async (id) => {
     try {
       const res = await fetch(`/api/conversations/${id}`);
@@ -149,10 +149,10 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     setReferenceImage(null);
     setUploadedFile(null);
     setInputValue("");
-    setSelectedMode(isStudio ? null : "general");
+    setSelectedMode(isStudio ? "image" : "general");
   };
 
-  // ─── API: Chat Completion ───────────────────────────────
+  // ─── API: Chat Completion (CHAT MODE ONLY) ────────────────
   const getGPTResponse = async (userMessage, context) => {
     try {
       const mode = context.mode || "general";
@@ -161,16 +161,11 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
         .map((m) => ({ role: m.type, content: m.text || "" }))
         .filter((m) => m.content.length > 0);
 
-      let enrichedMessage = userMessage;
-      if (context.hasImage && mode === "edit") {
-        enrichedMessage = `[User uploaded an image for editing] ${userMessage}`;
-      }
-
       const res = await fetch("/api/chat/completion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: enrichedMessage,
+          message: userMessage,
           mode,
           model: selectedModel,
           conversationId,
@@ -185,7 +180,6 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
       if (json.data.conversationId) {
         setConversationId(json.data.conversationId);
-        // Refresh sidebar
         loadConversations();
       }
 
@@ -225,16 +219,16 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     return { status: "failed", error: "Timed out" };
   };
 
-  // ─── API: Content Generation ────────────────────────────
+  // ─── API: Content Generation (STUDIO MODE) ────────────────
   const generateContent = async (prompt, type, refImage = null) => {
     try {
-      const actualType = videoModelIds.has(selectedGenModel) ? "video" : type || "image";
-      const endpoint = actualType === "video" ? "/api/pixlr/generate/video" : "/api/pixlr/generate/image";
+      const isVideo = type === "video";
+      const model = isVideo ? selectedVideoModel : selectedImageModel;
+      const endpoint = isVideo ? "/api/pixlr/generate/video" : "/api/pixlr/generate/image";
 
-      const body =
-        actualType === "video"
-          ? { prompt, model: selectedGenModel, duration: 8, style: "cinematic", aspectRatio: selectedRatio, resolution: "720p" }
-          : { prompt, model: selectedGenModel, style: "photorealistic", quality: "hd", aspectRatio: selectedRatio };
+      const body = isVideo
+        ? { prompt, model, duration: 8, style: "cinematic", aspectRatio: selectedRatio, resolution: "720p" }
+        : { prompt, model, style: "photorealistic", quality: "hd", aspectRatio: selectedRatio };
 
       if (refImage || referenceImage) body.imageUrls = [refImage || referenceImage];
 
@@ -248,13 +242,13 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       if (!json.success) return { success: false, error: json.error?.message || "Generation failed" };
 
       if (json.data.status === "completed" && json.data.result?.url) {
-        return { success: true, type: actualType, url: json.data.result.url, prompt };
+        return { success: true, type, url: json.data.result.url, prompt };
       }
 
       const result = await pollJobStatus(json.data.jobId);
       return {
         success: result.status === "completed",
-        type: actualType,
+        type,
         url: result.result?.url || "",
         prompt,
         error: result.error,
@@ -284,35 +278,79 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     const hasImage = !!uploadedFile;
     let messageText = inputValue.trim();
 
-    // Studio: image-only upload → show reference options
-    if (isStudio && !messageText && hasImage) {
-      const userMsg = { id: Date.now(), type: "user", text: "I uploaded a reference image.", image: uploadedFile, timestamp: new Date() };
+    // ═══ STUDIO MODE: Direct generation (no chat) ═══
+    if (isStudio) {
+      // Image-only upload → save as reference
+      if (!messageText && hasImage) {
+        const userMsg = { id: Date.now(), type: "user", text: "Uploaded a reference image.", image: uploadedFile, timestamp: new Date() };
+        setMessages((prev) => [...prev, userMsg]);
+
+        const hostedUrl = await uploadReferenceImage(uploadedFile);
+        setReferenceImage(hostedUrl || uploadedFile);
+        setUploadedFile(null);
+        setInputValue("");
+
+        setMessages((prev) => [...prev, {
+          id: Date.now() + 1,
+          type: "assistant",
+          text: hostedUrl
+            ? "Got your reference image! Type a prompt and I'll use it as reference for generation."
+            : "Saved your reference image. Type a prompt to generate.",
+          suggestions: ["🗑️ Remove reference"],
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+
+      if (!messageText && hasImage) messageText = "Generate from reference image.";
+      if (hasImage) {
+        const hostedUrl = await uploadReferenceImage(uploadedFile);
+        setReferenceImage(hostedUrl || uploadedFile);
+      }
+
+      // Show user message
+      const userMsg = { id: Date.now(), type: "user", text: messageText, image: hasImage ? uploadedFile : undefined, timestamp: new Date() };
       setMessages((prev) => [...prev, userMsg]);
-
-      // Upload reference to get a hosted URL
-      const hostedUrl = await uploadReferenceImage(uploadedFile);
-      setReferenceImage(hostedUrl || uploadedFile);
-      setUploadedFile(null);
       setInputValue("");
+      setUploadedFile(null);
+      setIsLoading(true);
 
-      const refMsg = {
+      // Go directly to generation — no ChatGPT
+      const genType = generationMode;
+      setMessages((prev) => [...prev, {
         id: Date.now() + 1,
         type: "assistant",
-        text: hostedUrl
-          ? "Got your reference image! What would you like to do with it?"
-          : "I saved your reference image locally. What would you like to do with it?",
-        suggestions: ["🎨 Create similar image", "✏️ Edit this image", "🧑 Use as pose reference", "📽️ Animate into video", "🗑️ Remove reference"],
+        text: `Generating your ${genType}${referenceImage ? " (with reference)" : ""}...`,
+        isGenerating: true,
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, refMsg]);
+      }]);
+
+      const result = await generateContent(messageText, genType);
+
+      if (result.success) {
+        setMessages((prev) => prev.filter((m) => !m.isGenerating).concat({
+          id: Date.now() + 2,
+          type: "assistant",
+          text: `Here's your ${genType}!`,
+          generatedContent: { type: genType, url: result.url, prompt: messageText },
+          suggestions: ["Download", "Create another"],
+          timestamp: new Date(),
+        }));
+      } else {
+        setMessages((prev) => prev.filter((m) => !m.isGenerating).concat({
+          id: Date.now() + 2,
+          type: "assistant",
+          text: `Generation failed: ${result.error || "Unknown error"}. Please try again.`,
+          suggestions: ["Try again", "Change model"],
+          timestamp: new Date(),
+        }));
+      }
+      setIsLoading(false);
       return;
     }
 
-    if (!messageText && hasImage) messageText = "I uploaded an image for reference.";
-    if (isStudio && hasImage) {
-      const hostedUrl = await uploadReferenceImage(uploadedFile);
-      setReferenceImage(hostedUrl || uploadedFile);
-    }
+    // ═══ CHAT MODE: AI conversation ═══
+    if (!messageText && hasImage) messageText = "I uploaded an image.";
 
     const userMsg = { id: Date.now(), type: "user", text: messageText, image: hasImage ? uploadedFile : undefined, timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
@@ -321,46 +359,26 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     setIsLoading(true);
 
     try {
-      // Chat mode: block generation
-      if (!isStudio && isGenerationRequest(messageText)) {
-        const redirect = {
+      // Block generation requests in chat mode
+      if (isGenerationRequest(messageText)) {
+        setMessages((prev) => [...prev, {
           id: Date.now() + 1,
           type: "assistant",
-          text: "I can't generate images or videos here. Please head over to the **Creative Studio** to create images and videos with AI!\n\nI can help you brainstorm ideas and refine prompts here.",
+          text: "I can't generate images or videos here. Head over to the **Creative Studio** to create with AI!\n\nI can help you brainstorm ideas and refine prompts here though.",
           suggestions: ["Go to Creative Studio", "Help me brainstorm", "Enhance my prompt"],
           timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, redirect]);
+        }]);
         setIsLoading(false);
         return;
       }
 
-      const activeMode = isStudio ? selectedMode || "image" : "general";
-      if (isStudio && !selectedMode) setSelectedMode("image");
-
-      const response = await getGPTResponse(messageText, { mode: activeMode, hasImage, previousMessages: messages });
-
-      let finalSuggestions = (response.suggestions || []).filter(
-        (s) => s.toLowerCase() !== "generate now" && s.toLowerCase() !== "generate video"
-      );
-
-      if (isStudio) {
-        const isGenMode = ["image", "video", "image-to-video"].includes(selectedMode);
-        if (isGenMode) {
-          const isVideoModel = videoModelIds.has(selectedGenModel);
-          const genBtn = isVideoModel ? "🎬 Generate video" : "🎨 Generate image";
-          finalSuggestions = [genBtn, ...finalSuggestions];
-          if (!finalSuggestions.some((s) => s.toLowerCase().includes("modify"))) {
-            finalSuggestions.push("Modify prompt");
-          }
-        }
-      }
+      const response = await getGPTResponse(messageText, { mode: "general", hasImage, previousMessages: messages });
 
       const aiMsg = {
         id: Date.now() + 1,
         type: "assistant",
         text: response.text,
-        suggestions: finalSuggestions,
+        suggestions: response.suggestions || [],
         awaitingConfirmation: response.awaitingConfirmation,
         enhancedPrompt: response.enhancedPrompt,
         timestamp: new Date(),
@@ -378,14 +396,6 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     const lower = suggestion.toLowerCase();
 
     if (lower.includes("go to creative studio")) { window.location.href = "/tools/studio"; return; }
-    if (lower.includes("create similar")) { setSelectedMode("image"); setInputValue("Create an image similar to my reference image, keeping the same style"); return; }
-    if (lower.includes("edit this image")) {
-      setSelectedMode("edit");
-      setMessages((prev) => [...prev, { id: Date.now(), type: "assistant", text: "What edits would you like? Describe what to change, add, or remove.", suggestions: ["Remove background", "Enhance quality", "Change style to anime", "Add dramatic lighting"] }]);
-      return;
-    }
-    if (lower.includes("pose reference")) { setSelectedMode("image"); setInputValue("Generate a new image using the pose from my reference image. Subject: "); return; }
-    if (lower.includes("animate into video")) { setSelectedMode("image-to-video"); setSelectedGenModel("veo3.1-fast"); setInputValue("Animate this image into a smooth cinematic video"); return; }
     if (lower.includes("remove reference")) { setReferenceImage(null); setMessages((prev) => [...prev, { id: Date.now(), type: "system", text: "Reference image removed" }]); return; }
 
     // Download
@@ -398,59 +408,56 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       return;
     }
 
-    const isGenerate = lower.includes("generate") || lower.includes("try again");
-
-    if (isStudio && isGenerate) {
-      const lastAi = [...messages].reverse().find((m) => m.enhancedPrompt);
+    // Studio: "try again" or "create another"
+    if (isStudio && (lower.includes("try again") || lower.includes("create another"))) {
       const lastUser = [...messages].reverse().find((m) => m.type === "user");
-      const prompt = lastAi?.enhancedPrompt || lastUser?.text;
-      if (prompt) {
-        setIsLoading(true);
-        const genType = videoModelIds.has(selectedGenModel) ? "video" : "image";
-        setMessages((prev) => [...prev, { id: Date.now(), type: "assistant", text: `Generating your ${genType}${referenceImage ? " (with reference)" : ""}...`, isGenerating: true }]);
-
-        const result = await generateContent(prompt, genType);
-        if (result.success) {
-          setMessages((prev) => prev.filter((m) => !m.isGenerating).concat({
-            id: Date.now() + 1, type: "assistant", text: `Here's your ${genType}!`,
-            generatedContent: { type: genType, url: result.url, prompt },
-            suggestions: ["Create another", "Edit this", "Download"],
-          }));
-        } else {
-          setMessages((prev) => prev.filter((m) => !m.isGenerating).concat({
-            id: Date.now() + 1, type: "assistant",
-            text: `Generation failed: ${result.error || "Unknown error"}. Please try again.`,
-            suggestions: ["Try again", "Modify prompt"],
-          }));
-        }
-        setIsLoading(false);
+      if (lastUser?.text) {
+        setInputValue(lastUser.text);
       }
-    } else if (!isStudio && isGenerate) {
-      setMessages((prev) => [...prev, { id: Date.now(), type: "assistant", text: "Image/video generation is available in the **Creative Studio**.", suggestions: ["Go to Creative Studio"] }]);
-    } else if (lower === "modify prompt") {
-      const lastAi = [...messages].reverse().find((m) => m.enhancedPrompt);
-      if (lastAi?.enhancedPrompt) setInputValue(lastAi.enhancedPrompt);
-    } else {
-      setInputValue(suggestion);
+      return;
     }
+
+    if (lower.includes("change model")) {
+      if (generationMode === "video") setShowVideoModelDropdown(true);
+      else setShowImageModelDropdown(true);
+      return;
+    }
+
+    // Default: set as input
+    setInputValue(suggestion);
   };
 
   // ─── Handle Suggestion Card Click ──────────────────────
   const handleCardAction = (action) => {
-    setSelectedMode(action);
     if (isStudio) {
-      if (action === "video") setSelectedGenModel("veo3.1-fast");
-      else setSelectedGenModel("gemini-2.5-flash-image-preview");
-    }
-
-    const labels = { image: "Create image", video: "Create a video", edit: "Edit an image", "image-to-video": "Animate image", brainstorm: "Brainstorm", enhance: "Enhance prompt", explain: "Explain", write: "Write content" };
-    setMessages((prev) => [...prev, { id: Date.now(), type: "system", text: `Mode: ${labels[action] || action}` }]);
-
-    if (isStudio && (action === "edit" || action === "image-to-video")) {
-      setMessages((prev) => [...prev, {
-        id: Date.now() + 1, type: "assistant",
-        text: action === "edit" ? "Upload an image you'd like to edit, or describe what you want." : "Upload an image to animate into a video.",
-      }]);
+      if (action === "video") {
+        setGenerationMode("video");
+        setSelectedMode("video");
+        setMessages((prev) => [...prev, { id: Date.now(), type: "system", text: "Switched to Video mode" }]);
+      } else if (action === "image") {
+        setGenerationMode("image");
+        setSelectedMode("image");
+        setMessages((prev) => [...prev, { id: Date.now(), type: "system", text: "Switched to Image mode" }]);
+      } else if (action === "edit") {
+        setMessages((prev) => [...prev, {
+          id: Date.now(), type: "assistant",
+          text: "Upload an image and describe what you'd like to change. I'll generate an edited version.",
+          timestamp: new Date(),
+        }]);
+      } else if (action === "image-to-video") {
+        setGenerationMode("video");
+        setSelectedMode("video");
+        setMessages((prev) => [...prev, {
+          id: Date.now(), type: "assistant",
+          text: "Upload an image and I'll animate it into a video. Or just describe what video you want.",
+          timestamp: new Date(),
+        }]);
+      }
+    } else {
+      // Chat mode cards
+      setSelectedMode(action);
+      const labels = { brainstorm: "Brainstorm", enhance: "Enhance prompt", explain: "Explain", write: "Write content" };
+      setMessages((prev) => [...prev, { id: Date.now(), type: "system", text: `Mode: ${labels[action] || action}` }]);
     }
   };
 
@@ -464,7 +471,6 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     }
   };
 
-  // Upload a base64 data URL to the server and get a hosted URL back
   const uploadReferenceImage = async (dataUrl) => {
     try {
       const res = await fetch("/api/upload/reference", {
@@ -482,7 +488,6 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     }
   };
 
-  // Helper: download a file from URL
   const handleDownload = async (url, filename) => {
     try {
       const res = await fetch(url);
@@ -495,13 +500,11 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
     } catch {
-      // Fallback: open in new tab
       window.open(url, "_blank");
     }
   };
 
   // ─── Sidebar width ─────────────────────────────────────
-  // On mobile, sidebar is an overlay → no margin on main
   const sidebarWidth = isMobile ? 0 : sidebarCollapsed ? 52 : 260;
 
   // ─── Render ─────────────────────────────────────────────
@@ -532,6 +535,11 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
               <p className="text-base sm:text-xl md:text-2xl font-semibold text-white/80 px-4">
                 {isStudio ? "What should we create?" : "Ready when you are."}
               </p>
+              {isStudio && (
+                <p className="text-sm text-white/40">
+                  Type a prompt → get {generationMode === "video" ? "a video" : "an image"} instantly
+                </p>
+              )}
             </div>
 
             <div className="w-full px-2 sm:px-4">
@@ -540,21 +548,34 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                 onChange={setInputValue}
                 onSend={handleSend}
                 disabled={isLoading}
-                placeholder={isStudio ? "Describe what you want to create..." : "Ask me anything..."}
+                placeholder={isStudio ? (generationMode === "video" ? "Describe the video you want to create..." : "Describe the image you want to create...") : "Ask me anything..."}
                 isStudio={isStudio}
                 uploadedFile={uploadedFile}
                 onUpload={handleFileUpload}
                 onRemoveUpload={() => setUploadedFile(null)}
                 referenceImage={referenceImage}
                 onRemoveReference={() => setReferenceImage(null)}
-                genModelLabel={currentGenModel.label}
-                genModelIcon={currentGenModel.icon}
-                onGenModelClick={() => setShowGenModelDropdown(true)}
-                chatModelLabel={currentChatModel.label}
-                chatModelIcon={currentChatModel.icon}
-                onChatModelClick={() => setShowChatModelDropdown(true)}
+                // Image model (studio only)
+                genModelLabel={currentImageModel.label}
+                genModelIcon={currentImageModel.icon}
+                onGenModelClick={() => setShowImageModelDropdown(true)}
+                // Video model (studio only)
+                videoModelLabel={currentVideoModel.label}
+                videoModelIcon={currentVideoModel.icon}
+                onVideoModelClick={() => setShowVideoModelDropdown(true)}
+                // Chat model (chat only — not passed in studio)
+                chatModelLabel={!isStudio ? currentChatModel.label : undefined}
+                chatModelIcon={!isStudio ? currentChatModel.icon : undefined}
+                onChatModelClick={!isStudio ? () => setShowChatModelDropdown(true) : undefined}
+                // Ratio
                 ratioLabel={selectedRatio}
                 onRatioClick={() => setShowRatioDropdown(true)}
+                // Mode toggle (studio only)
+                generationMode={generationMode}
+                onModeToggle={(mode) => {
+                  setGenerationMode(mode);
+                  setSelectedMode(mode);
+                }}
               />
               <SuggestionCards pageMode={pageMode} onSelect={handleCardAction} />
             </div>
@@ -626,7 +647,6 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                                       <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center text-2xl">▶</div>
                                     </div>
                                   )}
-                                  {/* Download overlay button */}
                                   {msg.generatedContent.url && (
                                     <button
                                       onClick={() => {
@@ -694,29 +714,38 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                 onChange={setInputValue}
                 onSend={handleSend}
                 disabled={isLoading}
-                placeholder={isStudio ? "Describe what you want..." : "Type a message..."}
+                placeholder={isStudio ? (generationMode === "video" ? "Describe the video..." : "Describe the image...") : "Type a message..."}
                 isStudio={isStudio}
                 uploadedFile={uploadedFile}
                 onUpload={handleFileUpload}
                 onRemoveUpload={() => setUploadedFile(null)}
                 referenceImage={referenceImage}
                 onRemoveReference={() => setReferenceImage(null)}
-                genModelLabel={currentGenModel.label}
-                genModelIcon={currentGenModel.icon}
-                onGenModelClick={() => setShowGenModelDropdown(true)}
-                chatModelLabel={currentChatModel.label}
-                chatModelIcon={currentChatModel.icon}
-                onChatModelClick={() => setShowChatModelDropdown(true)}
+                genModelLabel={currentImageModel.label}
+                genModelIcon={currentImageModel.icon}
+                onGenModelClick={() => setShowImageModelDropdown(true)}
+                videoModelLabel={currentVideoModel.label}
+                videoModelIcon={currentVideoModel.icon}
+                onVideoModelClick={() => setShowVideoModelDropdown(true)}
+                chatModelLabel={!isStudio ? currentChatModel.label : undefined}
+                chatModelIcon={!isStudio ? currentChatModel.icon : undefined}
+                onChatModelClick={!isStudio ? () => setShowChatModelDropdown(true) : undefined}
                 ratioLabel={selectedRatio}
                 onRatioClick={() => setShowRatioDropdown(true)}
+                generationMode={generationMode}
+                onModeToggle={(mode) => {
+                  setGenerationMode(mode);
+                  setSelectedMode(mode);
+                }}
               />
             </div>
           </>
         )}
       </main>
 
-      {/* ═══ Dropdowns (portal-like, positioned above input) ═══ */}
-      {showChatModelDropdown && (
+      {/* ═══ Dropdowns ═══ */}
+      {/* Chat model dropdown (chat mode only) */}
+      {showChatModelDropdown && !isStudio && (
         <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
           <div className="max-w-[720px] mx-auto relative">
             <ModelDropdown
@@ -729,23 +758,35 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
         </div>
       )}
 
-      {showGenModelDropdown && (
+      {/* Image model dropdown (studio only) */}
+      {showImageModelDropdown && isStudio && (
         <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
           <div className="max-w-[720px] mx-auto relative">
             <ModelDropdown
-              options={allGenModels}
-              selectedId={selectedGenModel}
-              onSelect={(id) => {
-                setSelectedGenModel(id);
-                setSelectedMode(videoModelIds.has(id) ? "video" : "image");
-              }}
-              onClose={() => setShowGenModelDropdown(false)}
-              grouped
+              options={imageGenModels}
+              selectedId={selectedImageModel}
+              onSelect={setSelectedImageModel}
+              onClose={() => setShowImageModelDropdown(false)}
             />
           </div>
         </div>
       )}
 
+      {/* Video model dropdown (studio only) */}
+      {showVideoModelDropdown && isStudio && (
+        <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
+          <div className="max-w-[720px] mx-auto relative">
+            <ModelDropdown
+              options={videoGenModels}
+              selectedId={selectedVideoModel}
+              onSelect={setSelectedVideoModel}
+              onClose={() => setShowVideoModelDropdown(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Ratio dropdown */}
       {showRatioDropdown && (
         <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
           <div className="max-w-[720px] mx-auto relative">

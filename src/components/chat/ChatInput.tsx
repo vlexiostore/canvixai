@@ -7,6 +7,8 @@ import {
   ChevronDown,
   X,
   Sparkles,
+  Image as ImageIcon,
+  Video,
 } from "lucide-react";
 
 interface ChatInputProps {
@@ -22,16 +24,24 @@ interface ChatInputProps {
   onRemoveUpload?: () => void;
   referenceImage?: string | null;
   onRemoveReference?: () => void;
-  // Model selectors
+  // Generation model selectors (studio only)
   genModelLabel?: string;
   genModelIcon?: string;
   onGenModelClick?: () => void;
+  // Separate video model selector (studio only)
+  videoModelLabel?: string;
+  videoModelIcon?: string;
+  onVideoModelClick?: () => void;
+  // Chat model selector (chat only)
   chatModelLabel?: string;
   chatModelIcon?: string;
   onChatModelClick?: () => void;
-  // Ratio selector
+  // Ratio selector (studio only)
   ratioLabel?: string;
   onRatioClick?: () => void;
+  // Mode toggle (studio only)
+  generationMode?: "image" | "video";
+  onModeToggle?: (mode: "image" | "video") => void;
 }
 
 export function ChatInput({
@@ -49,11 +59,16 @@ export function ChatInput({
   genModelLabel,
   genModelIcon,
   onGenModelClick,
+  videoModelLabel,
+  videoModelIcon,
+  onVideoModelClick,
   chatModelLabel,
   chatModelIcon,
   onChatModelClick,
   ratioLabel,
   onRatioClick,
+  generationMode,
+  onModeToggle,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,6 +170,34 @@ export function ChatInput({
               </>
             )}
 
+            {/* Mode Toggle: Image / Video (studio only) */}
+            {isStudio && onModeToggle && (
+              <div className="flex items-center bg-[#111] rounded-lg border border-[#2a2a2a] overflow-hidden shrink-0">
+                <button
+                  onClick={() => onModeToggle("image")}
+                  className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors ${
+                    generationMode === "image"
+                      ? "bg-purple-600 text-white"
+                      : "text-gray-500 hover:text-white"
+                  }`}
+                >
+                  <ImageIcon size={11} className="sm:w-3 sm:h-3" />
+                  <span className="hidden xs:inline sm:inline">Image</span>
+                </button>
+                <button
+                  onClick={() => onModeToggle("video")}
+                  className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors ${
+                    generationMode === "video"
+                      ? "bg-purple-600 text-white"
+                      : "text-gray-500 hover:text-white"
+                  }`}
+                >
+                  <Video size={11} className="sm:w-3 sm:h-3" />
+                  <span className="hidden xs:inline sm:inline">Video</span>
+                </button>
+              </div>
+            )}
+
             {/* Aspect Ratio (studio only) */}
             {isStudio && onRatioClick && (
               <button
@@ -166,8 +209,8 @@ export function ChatInput({
               </button>
             )}
 
-            {/* Gen Model (studio only) — hide label on very small screens */}
-            {isStudio && onGenModelClick && (
+            {/* Image Model (studio only, image mode) */}
+            {isStudio && onGenModelClick && generationMode === "image" && (
               <button
                 onClick={onGenModelClick}
                 className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
@@ -178,8 +221,20 @@ export function ChatInput({
               </button>
             )}
 
-            {/* Chat Model (always) */}
-            {onChatModelClick && (
+            {/* Video Model (studio only, video mode) */}
+            {isStudio && onVideoModelClick && generationMode === "video" && (
+              <button
+                onClick={onVideoModelClick}
+                className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
+              >
+                <span>{videoModelIcon}</span>
+                <span className="hidden xs:inline sm:inline">{videoModelLabel}</span>
+                <ChevronDown size={10} className="sm:w-3 sm:h-3" />
+              </button>
+            )}
+
+            {/* Chat Model (chat mode only — NOT shown in studio) */}
+            {!isStudio && onChatModelClick && (
               <button
                 onClick={onChatModelClick}
                 className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
