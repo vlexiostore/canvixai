@@ -280,22 +280,19 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
     // ═══ STUDIO MODE: Direct generation (no chat) ═══
     if (isStudio) {
-      // Image-only upload → save as reference
+      // Image-only upload → save as reference (store data URL directly — APIMart accepts base64)
       if (!messageText && hasImage) {
         const userMsg = { id: Date.now(), type: "user", text: "Uploaded a reference image.", image: uploadedFile, timestamp: new Date() };
         setMessages((prev) => [...prev, userMsg]);
 
-        const hostedUrl = await uploadReferenceImage(uploadedFile);
-        setReferenceImage(hostedUrl || uploadedFile);
+        setReferenceImage(uploadedFile);
         setUploadedFile(null);
         setInputValue("");
 
         setMessages((prev) => [...prev, {
           id: Date.now() + 1,
           type: "assistant",
-          text: hostedUrl
-            ? "Got your reference image! Type a prompt and I'll use it as reference for generation."
-            : "Saved your reference image. Type a prompt to generate.",
+          text: "Got your reference image! Type a prompt and I'll use it as reference for generation.",
           suggestions: ["🗑️ Remove reference"],
           timestamp: new Date(),
         }]);
@@ -304,8 +301,8 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
       if (!messageText && hasImage) messageText = "Generate from reference image.";
       if (hasImage) {
-        const hostedUrl = await uploadReferenceImage(uploadedFile);
-        setReferenceImage(hostedUrl || uploadedFile);
+        // Store the data URL directly as reference — APIMart supports base64 in image_urls
+        setReferenceImage(uploadedFile);
       }
 
       // Show user message
@@ -471,22 +468,8 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     }
   };
 
-  const uploadReferenceImage = async (dataUrl) => {
-    try {
-      const res = await fetch("/api/upload/reference", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataUrl }),
-      });
-      const json = await res.json();
-      if (json.success) return json.data.url;
-      console.error("Reference upload failed:", json.error);
-      return null;
-    } catch (e) {
-      console.error("Reference upload error:", e);
-      return null;
-    }
-  };
+  // Reference images are stored as data URLs and passed directly to APIMart
+  // (APIMart supports base64 data URLs in image_urls field)
 
   const handleDownload = async (url, filename) => {
     try {
