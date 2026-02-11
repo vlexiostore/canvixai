@@ -15,10 +15,14 @@ const isPublicRoute = createRouteMatcher([
   "/api/stripe/webhook(.*)",
 ]);
 
-// Only enable Clerk middleware when BOTH keys are real (not empty/placeholder)
+// Only enable Clerk middleware when BOTH keys are real and we're not in "local dev" mode.
+// Set NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL=true in .env.local to access dashboard without signing in on localhost.
+// In production (Vercel, etc.) do NOT set this — Clerk will protect routes.
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const clerkSec = process.env.CLERK_SECRET_KEY ?? "";
+const skipClerkForLocal = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
 const hasClerk =
+  !skipClerkForLocal &&
   clerkPub.startsWith("pk_") &&
   clerkSec.startsWith("sk_") &&
   clerkSec.length > 10;

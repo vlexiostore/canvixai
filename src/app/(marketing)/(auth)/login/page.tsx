@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Github } from "lucide-react";
-import { SignIn, useAuth } from "@clerk/nextjs";
+import { SignIn } from "@clerk/nextjs";
 
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-const hasClerk = clerkPub.startsWith("pk_") && clerkPub.length > 10;
+const skipClerkLocal = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
+const hasClerk = clerkPub.startsWith("pk_") && clerkPub.length > 10 && !skipClerkLocal;
 
 export default function LoginPage() {
-    // If Clerk is enabled, use Clerk's SignIn component
+    // Only use Clerk SignIn when Clerk is enabled and we're not in "local dev" mode (no ClerkProvider)
     if (hasClerk) {
         return (
             <div className="py-8">

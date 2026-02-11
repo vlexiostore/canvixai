@@ -22,8 +22,9 @@ interface ChatInputProps {
   uploadedFile?: string | null;
   onUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveUpload?: () => void;
-  referenceImage?: string | null;
-  onRemoveReference?: () => void;
+  // Multiple reference images
+  referenceImages?: string[];
+  onRemoveReference?: (index?: number) => void;
   // Generation model selectors (studio only)
   genModelLabel?: string;
   genModelIcon?: string;
@@ -54,7 +55,7 @@ export function ChatInput({
   uploadedFile,
   onUpload,
   onRemoveUpload,
-  referenceImage,
+  referenceImages = [],
   onRemoveReference,
   genModelLabel,
   genModelIcon,
@@ -89,30 +90,56 @@ export function ChatInput({
     }
   };
 
+  const hasRefs = referenceImages.length > 0;
+
   return (
     <div className="w-full max-w-[720px] mx-auto relative group">
-      {/* Reference Image Indicator */}
-      {isStudio && referenceImage && !uploadedFile && (
-        <div className="flex items-center gap-2 sm:gap-3 mb-2 px-3 sm:px-4 py-2 bg-orange-500/5 border border-orange-500/15 rounded-xl">
-          <img
-            src={referenceImage}
-            alt="Reference"
-            className="w-8 h-8 sm:w-9 sm:h-9 object-cover rounded-lg"
-          />
-          <div className="flex-1 min-w-0">
+      {/* Reference Images Indicator — shows all active references */}
+      {isStudio && hasRefs && !uploadedFile && (
+        <div className="mb-2 px-3 sm:px-4 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-semibold text-orange-400">
-              Reference image active
+              {referenceImages.length} reference image{referenceImages.length > 1 ? "s" : ""} active
             </div>
-            <div className="text-[10px] sm:text-[11px] text-gray-500">
-              Will be used for next generation
-            </div>
+            <button
+              onClick={() => onRemoveReference?.()}
+              className="text-[10px] text-gray-500 hover:text-red-400 transition-colors px-2 py-0.5 rounded-md hover:bg-red-500/10"
+            >
+              Remove all
+            </button>
           </div>
-          <button
-            onClick={onRemoveReference}
-            className="text-gray-500 hover:text-white transition-colors p-1"
-          >
-            <X size={14} />
-          </button>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {referenceImages.map((img, i) => (
+              <div key={i} className="relative shrink-0 group/ref">
+                <img
+                  src={img}
+                  alt={`Reference ${i + 1}`}
+                  className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg border border-white/10"
+                />
+                <button
+                  onClick={() => onRemoveReference?.(i)}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover/ref:opacity-100 transition-opacity"
+                >
+                  <X size={8} />
+                </button>
+                <div className="absolute bottom-0 right-0 bg-black/70 text-[8px] text-white/80 px-1 rounded-tl-md rounded-br-lg">
+                  {i + 1}
+                </div>
+              </div>
+            ))}
+            {referenceImages.length < 14 && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg border border-dashed border-white/20 hover:border-orange-400/50 flex items-center justify-center text-white/30 hover:text-orange-400 transition-colors"
+                title="Add another reference"
+              >
+                <ImagePlus size={16} />
+              </button>
+            )}
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1.5">
+            Will be used for next generation • {14 - referenceImages.length} slots remaining
+          </div>
         </div>
       )}
 
@@ -156,7 +183,7 @@ export function ChatInput({
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="p-1.5 sm:p-2 text-gray-500 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg shrink-0"
-                  title="Upload image"
+                  title={hasRefs ? `Add reference (${referenceImages.length}/14)` : "Upload image"}
                 >
                   <ImagePlus size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
@@ -231,6 +258,13 @@ export function ChatInput({
                 <span className="hidden xs:inline sm:inline">{videoModelLabel}</span>
                 <ChevronDown size={10} className="sm:w-3 sm:h-3" />
               </button>
+            )}
+
+            {/* Reference count badge (studio, compact) */}
+            {isStudio && hasRefs && (
+              <span className="px-2 py-1 text-[10px] sm:text-[11px] text-orange-400 bg-orange-500/10 rounded-lg font-medium shrink-0">
+                {referenceImages.length} ref{referenceImages.length > 1 ? "s" : ""}
+              </span>
             )}
 
             {/* Chat Model (chat mode only — NOT shown in studio) */}

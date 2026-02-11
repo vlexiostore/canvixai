@@ -14,7 +14,9 @@ export const metadata: Metadata = {
 
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const clerkSec = process.env.CLERK_SECRET_KEY ?? "";
+const skipClerkForLocal = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
 const hasClerk =
+  !skipClerkForLocal &&
   clerkPub.startsWith("pk_") &&
   clerkSec.startsWith("sk_") &&
   clerkSec.length > 10;

@@ -7,10 +7,11 @@ import { Github, Sparkles } from "lucide-react";
 import { SignUp } from "@clerk/nextjs";
 
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-const hasClerk = clerkPub.startsWith("pk_") && clerkPub.length > 10;
+const skipClerkLocal = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
+const hasClerk = clerkPub.startsWith("pk_") && clerkPub.length > 10 && !skipClerkLocal;
 
 export default function SignupPage() {
-    // If Clerk is enabled, use Clerk's SignUp component
+    // Only use Clerk SignUp when Clerk is enabled and we're not in "local dev" mode (no ClerkProvider)
     if (hasClerk) {
         return (
             <div className="py-8">
