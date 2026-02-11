@@ -57,7 +57,7 @@ export function InfiniteShowcase() {
   const dotsRef = React.useRef<(HTMLDivElement | null)[]>([]);
   const labelsRef = React.useRef<(HTMLSpanElement | null)[]>([]);
   const hintRef = React.useRef<HTMLDivElement>(null);
-  const rafRef = React.useRef<number>();
+  const rafRef = React.useRef<number>(0);
 
   React.useEffect(() => {
     const section = sectionRef.current;
