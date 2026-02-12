@@ -94,6 +94,17 @@ export const VALID_IMAGE_MODEL_IDS = IMAGE_MODELS.map((m) => m.id);
 
 export const VIDEO_MODELS = [
   {
+    id: "kling-v2-6",
+    label: "Canvix Video Ultra",
+    description: "5-10s, 1080p pro, image-to-video, audio",
+    icon: "👑",
+    durations: [5, 10],
+    resolutions: ["720p", "1080p"],
+    aspectRatios: ["16:9", "9:16", "1:1"],
+    supportsImageRef: true,
+    supportsAudio: true,
+  },
+  {
     id: "wan2.6",
     label: "Canvix Video Pro",
     description: "5-15s, image-to-video supported",
@@ -102,6 +113,7 @@ export const VIDEO_MODELS = [
     resolutions: ["720p", "1080p"],
     aspectRatios: ["16:9", "9:16", "1:1", "4:3", "3:4"],
     supportsImageRef: true,
+    supportsAudio: false,
   },
   {
     id: "veo3.1-fast",
@@ -112,10 +124,11 @@ export const VIDEO_MODELS = [
     resolutions: ["720p", "1080p", "4k"],
     aspectRatios: ["16:9", "9:16"],
     supportsImageRef: false,
+    supportsAudio: false,
   },
 ] as const;
 
-export const DEFAULT_VIDEO_MODEL = "wan2.6";
+export const DEFAULT_VIDEO_MODEL = "kling-v2-6";
 export const VALID_VIDEO_MODEL_IDS = VIDEO_MODELS.map((m) => m.id);
 
 // ---- Types ----
@@ -208,14 +221,16 @@ export async function submitVideoGeneration(params: {
   aspectRatio?: string;
   resolution?: string;
   imageUrls?: string[];
+  negativePrompt?: string;
+  audio?: boolean;
 }): Promise<{ taskId: string }> {
-  // If reference images are provided, force wan2.6 (only model that supports image-to-video)
+  // If reference images are provided, auto-switch from models that don't support it
   let model = params.model;
   const hasRefs = params.imageUrls && params.imageUrls.length > 0;
 
   if (hasRefs && model === "veo3.1-fast") {
-    console.log("Image-to-video: switching from veo3.1-fast to wan2.6 (supports image refs)");
-    model = "wan2.6";
+    console.log("Image-to-video: switching from veo3.1-fast to kling-v2-6 (supports image refs)");
+    model = "kling-v2-6";
   }
 
   const body: Record<string, unknown> = {
@@ -223,7 +238,24 @@ export async function submitVideoGeneration(params: {
     prompt: params.prompt,
   };
 
-  if (model === "veo3.1-fast" || model === "veo3.1-quality") {
+  if (model === "kling-v2-6") {
+    // Kling v2.6: mode std=720p, pro=1080p
+    const isPro = params.resolution === "1080p";
+    body.mode = isPro ? "pro" : "std";
+    body.duration = params.duration === 10 ? 10 : 5;
+    body.aspect_ratio = params.aspectRatio || "16:9";
+
+    if (params.negativePrompt) {
+      body.negative_prompt = params.negativePrompt;
+    }
+
+    // Audio only available in pro mode, and mutually exclusive with last-frame (2 images)
+    if (isPro && params.audio && (!hasRefs || params.imageUrls!.length <= 1)) {
+      body.audio = true;
+    }
+
+    body.watermark = false;
+  } else if (model === "veo3.1-fast" || model === "veo3.1-quality") {
     body.duration = 8; // VEO3 only supports 8s
     body.aspect_ratio = params.aspectRatio || "16:9";
     body.resolution = params.resolution || "720p";
@@ -236,7 +268,12 @@ export async function submitVideoGeneration(params: {
   }
 
   if (hasRefs) {
-    body.image_urls = params.imageUrls;
+    // Kling supports max 2 images (first frame + optional last frame in pro)
+    if (model === "kling-v2-6") {
+      body.image_urls = params.imageUrls!.slice(0, 2);
+    } else {
+      body.image_urls = params.imageUrls;
+    }
   }
 
   const response = await fetchWithRetry(`${APIMART_BASE_URL}/videos/generations`, {

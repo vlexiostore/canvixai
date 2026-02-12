@@ -41,7 +41,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   const [selectedModel, setSelectedModel] = useState("gpt-5-mini");
   // Generation models — separate for image and video
   const [selectedImageModel, setSelectedImageModel] = useState("gemini-2.5-flash-image-preview");
-  const [selectedVideoModel, setSelectedVideoModel] = useState("wan2.6");
+  const [selectedVideoModel, setSelectedVideoModel] = useState("kling-v2-6");
   const [selectedRatio, setSelectedRatio] = useState("1:1");
   // Generation mode toggle (studio only)
   const [generationMode, setGenerationMode] = useState("image");
@@ -73,13 +73,37 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   ];
 
   const videoGenModels = [
-    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, image-to-video, audio", icon: "🎥" },
-    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, text-to-video only", icon: "🎬" },
+    { id: "kling-v2-6", label: "Canvix Video Ultra", description: "5-10s, 1080p, image-to-video, audio", icon: "👑", durations: [5, 10], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: true },
+    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, image-to-video", icon: "🎥", durations: [5, 10, 15], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: false },
+    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, text-to-video only", icon: "🎬", durations: [8], resolutions: ["720p", "1080p", "4k"], supportsImageRef: false, supportsAudio: false },
   ];
 
   const currentImageModel = imageGenModels.find((m) => m.id === selectedImageModel) || imageGenModels[0];
   const currentVideoModel = videoGenModels.find((m) => m.id === selectedVideoModel) || videoGenModels[0];
   const currentChatModel = chatModels.find((m) => m.id === selectedModel) || chatModels[2];
+
+  // Video-specific settings
+  const [videoDuration, setVideoDuration] = useState(5);
+  const [videoResolution, setVideoResolution] = useState("720p");
+  const [videoAudio, setVideoAudio] = useState(false);
+  const [showDurationDropdown, setShowDurationDropdown] = useState(false);
+  const [showResolutionDropdown, setShowResolutionDropdown] = useState(false);
+
+  // Sync duration/resolution when switching video model
+  useEffect(() => {
+    const model = videoGenModels.find((m) => m.id === selectedVideoModel);
+    if (model) {
+      if (!model.durations.includes(videoDuration)) {
+        setVideoDuration(model.durations[0]);
+      }
+      if (!model.resolutions.includes(videoResolution)) {
+        setVideoResolution(model.resolutions[0]);
+      }
+      if (!model.supportsAudio) {
+        setVideoAudio(false);
+      }
+    }
+  }, [selectedVideoModel]);
 
   const ratioOptions = [
     { id: "1:1", label: "1:1", description: "Square", icon: "⬜" },
@@ -227,7 +251,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       const endpoint = isVideo ? "/api/pixlr/generate/video" : "/api/pixlr/generate/image";
 
       const body = isVideo
-        ? { prompt, model, duration: 8, style: "cinematic", aspectRatio: selectedRatio, resolution: "720p" }
+        ? { prompt, model, duration: videoDuration, style: "cinematic", aspectRatio: selectedRatio, resolution: videoResolution, audio: videoAudio }
         : { prompt, model, style: "photorealistic", quality: "hd", aspectRatio: selectedRatio };
 
       // Combine stored references + any extra refs from this send
@@ -586,6 +610,14 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                   setGenerationMode(mode);
                   setSelectedMode(mode);
                 }}
+                // Video settings
+                videoDuration={videoDuration}
+                onDurationClick={() => setShowDurationDropdown(true)}
+                videoResolution={videoResolution}
+                onResolutionClick={() => setShowResolutionDropdown(true)}
+                videoAudio={videoAudio}
+                onAudioToggle={() => setVideoAudio(!videoAudio)}
+                currentVideoModelDef={currentVideoModel}
               />
               <SuggestionCards pageMode={pageMode} onSelect={handleCardAction} />
             </div>
@@ -750,6 +782,13 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                   setGenerationMode(mode);
                   setSelectedMode(mode);
                 }}
+                videoDuration={videoDuration}
+                onDurationClick={() => setShowDurationDropdown(true)}
+                videoResolution={videoResolution}
+                onResolutionClick={() => setShowResolutionDropdown(true)}
+                videoAudio={videoAudio}
+                onAudioToggle={() => setVideoAudio(!videoAudio)}
+                currentVideoModelDef={currentVideoModel}
               />
             </div>
           </>
@@ -810,6 +849,44 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
               onClose={() => setShowRatioDropdown(false)}
             />
       </div>
+        </div>
+      )}
+
+      {/* Duration dropdown (video mode, studio only) */}
+      {showDurationDropdown && isStudio && generationMode === "video" && (
+        <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
+          <div className="max-w-[720px] mx-auto relative">
+            <ModelDropdown
+              options={currentVideoModel.durations.map((d) => ({
+                id: String(d),
+                label: `${d}s`,
+                description: `${d} seconds`,
+                icon: d <= 5 ? "⚡" : d <= 10 ? "🎬" : "🎥",
+              }))}
+              selectedId={String(videoDuration)}
+              onSelect={(id) => setVideoDuration(Number(id))}
+              onClose={() => setShowDurationDropdown(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Resolution dropdown (video mode, studio only) */}
+      {showResolutionDropdown && isStudio && generationMode === "video" && (
+        <div className="fixed z-50 bottom-20 left-3 right-3 md:left-auto md:right-auto" style={isMobile ? {} : { left: sidebarWidth + 16, right: 16, bottom: 80 }}>
+          <div className="max-w-[720px] mx-auto relative">
+            <ModelDropdown
+              options={currentVideoModel.resolutions.map((r) => ({
+                id: r,
+                label: r,
+                description: r === "720p" ? "Standard" : r === "1080p" ? "HD Pro" : "Ultra HD",
+                icon: r === "720p" ? "📺" : r === "1080p" ? "🖥️" : "🎞️",
+              }))}
+              selectedId={videoResolution}
+              onSelect={setVideoResolution}
+              onClose={() => setShowResolutionDropdown(false)}
+            />
+          </div>
         </div>
       )}
     </div>

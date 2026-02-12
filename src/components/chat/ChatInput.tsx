@@ -9,7 +9,22 @@ import {
   Sparkles,
   Image as ImageIcon,
   Video,
+  Clock,
+  Monitor,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
+
+interface VideoModelDef {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  durations: readonly number[] | number[];
+  resolutions: readonly string[] | string[];
+  supportsImageRef: boolean;
+  supportsAudio: boolean;
+}
 
 interface ChatInputProps {
   value: string;
@@ -43,6 +58,14 @@ interface ChatInputProps {
   // Mode toggle (studio only)
   generationMode?: "image" | "video";
   onModeToggle?: (mode: "image" | "video") => void;
+  // Video settings (studio + video mode only)
+  videoDuration?: number;
+  onDurationClick?: () => void;
+  videoResolution?: string;
+  onResolutionClick?: () => void;
+  videoAudio?: boolean;
+  onAudioToggle?: () => void;
+  currentVideoModelDef?: VideoModelDef;
 }
 
 export function ChatInput({
@@ -70,6 +93,13 @@ export function ChatInput({
   onRatioClick,
   generationMode,
   onModeToggle,
+  videoDuration,
+  onDurationClick,
+  videoResolution,
+  onResolutionClick,
+  videoAudio,
+  onAudioToggle,
+  currentVideoModelDef,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -257,6 +287,48 @@ export function ChatInput({
                 <span>{videoModelIcon}</span>
                 <span className="hidden xs:inline sm:inline">{videoModelLabel}</span>
                 <ChevronDown size={10} className="sm:w-3 sm:h-3" />
+              </button>
+            )}
+
+            {/* Duration (studio + video mode) */}
+            {isStudio && generationMode === "video" && onDurationClick && (
+              <button
+                onClick={onDurationClick}
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
+                title="Video duration"
+              >
+                <Clock size={10} className="sm:w-3 sm:h-3" />
+                <span>{videoDuration}s</span>
+                <ChevronDown size={10} className="sm:w-3 sm:h-3" />
+              </button>
+            )}
+
+            {/* Resolution (studio + video mode) */}
+            {isStudio && generationMode === "video" && onResolutionClick && (
+              <button
+                onClick={onResolutionClick}
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-colors rounded-lg font-medium shrink-0"
+                title="Video resolution"
+              >
+                <Monitor size={10} className="sm:w-3 sm:h-3" />
+                <span>{videoResolution}</span>
+                <ChevronDown size={10} className="sm:w-3 sm:h-3" />
+              </button>
+            )}
+
+            {/* Audio toggle (studio + video mode, only if model supports it & resolution is pro/1080p) */}
+            {isStudio && generationMode === "video" && onAudioToggle && currentVideoModelDef?.supportsAudio && videoResolution === "1080p" && (
+              <button
+                onClick={onAudioToggle}
+                className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors rounded-lg shrink-0 ${
+                  videoAudio
+                    ? "text-purple-300 bg-purple-500/20 border border-purple-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-[#2a2a2a]"
+                }`}
+                title={videoAudio ? "Audio enabled (Pro mode)" : "Enable auto audio (Pro mode)"}
+              >
+                {videoAudio ? <Volume2 size={10} className="sm:w-3 sm:h-3" /> : <VolumeX size={10} className="sm:w-3 sm:h-3" />}
+                <span className="hidden xs:inline sm:inline">{videoAudio ? "Audio" : "Muted"}</span>
               </button>
             )}
 

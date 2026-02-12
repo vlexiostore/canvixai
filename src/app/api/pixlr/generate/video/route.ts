@@ -18,9 +18,9 @@ import {
 import Job from "@/models/Job";
 
 const requestSchema = z.object({
-  prompt: z.string().min(1).max(1000),
+  prompt: z.string().min(1).max(2500),
   model: z.string().optional().default(DEFAULT_VIDEO_MODEL),
-  duration: z.number().min(4).max(16).default(8),
+  duration: z.number().min(4).max(16).default(5),
   resolution: z.enum(["720p", "1080p", "4k"]).default("720p"),
   aspectRatio: z
     .enum(["16:9", "9:16", "1:1", "4:3", "3:4"])
@@ -30,6 +30,8 @@ const requestSchema = z.object({
     .optional()
     .default("cinematic"),
   imageUrls: z.array(z.string()).optional(),
+  negativePrompt: z.string().max(500).optional(),
+  audio: z.boolean().optional().default(false),
 });
 
 export async function POST(req: NextRequest) {
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
       : DEFAULT_VIDEO_MODEL;
 
     if (hasRefs && model === "veo3.1-fast") {
-      model = "wan2.6"; // veo3 doesn't support image refs
+      model = "kling-v2-6"; // veo3 doesn't support image refs, use kling instead
     }
 
     // Determine job type for credits
@@ -78,6 +80,8 @@ export async function POST(req: NextRequest) {
       aspectRatio: data.aspectRatio,
       resolution: data.resolution,
       imageUrls: data.imageUrls,
+      negativePrompt: data.negativePrompt,
+      audio: data.audio,
     });
 
     // Create job as processing
