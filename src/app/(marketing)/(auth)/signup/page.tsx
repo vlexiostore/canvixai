@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SignUp } from "@clerk/nextjs";
 import { AuthUI } from "@/components/ui/auth-fuse";
 
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
@@ -31,26 +30,6 @@ export default function SignupPage() {
     }, [router]);
 
     if (skipClerkLocal) return null;
-
-    if (hasClerk) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-6">
-                <SignUp
-                    routing="hash"
-                    appearance={{
-                        elements: {
-                            rootBox: "w-full max-w-md",
-                            card: "shadow-none p-0 w-full bg-transparent",
-                            formButtonPrimary: "bg-gradient-to-r from-purple-500 to-cyan-500 hover:opacity-90 rounded-xl py-3 text-base font-bold",
-                            formFieldInput: "bg-gray-50 border border-black/10 rounded-xl px-5 py-4 focus:border-black focus:ring-1 focus:ring-black",
-                            footerActionLink: "text-black font-bold hover:text-purple-600",
-                        },
-                    }}
-                    fallbackRedirectUrl="/dashboard"
-                />
-            </div>
-        );
-    }
 
     const handleSignIn = async (email: string, password: string) => {
         setError("");
@@ -105,7 +84,11 @@ export default function SignupPage() {
             initialMode="signup"
             onSignIn={handleSignIn}
             onSignUp={handleSignUp}
-            onGoogleClick={() => console.log("Google auth not configured for local dev")}
+            onGoogleClick={() => {
+                if (hasClerk) {
+                    window.location.href = "/sso-callback?provider=google";
+                }
+            }}
             error={error}
             loading={loading}
         />

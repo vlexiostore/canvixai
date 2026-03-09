@@ -26,6 +26,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
   const [conversationId, setConversationId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [clientUserEmail, setClientUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const check = () => {
@@ -36,6 +37,16 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("canvix_user") : null;
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data?.email) setClientUserEmail(data.email);
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // Models — Chat (only used in chat mode)
@@ -569,6 +580,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
         pageMode={pageMode}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        userEmail={user?.email ?? clientUserEmail}
       />
 
       <main

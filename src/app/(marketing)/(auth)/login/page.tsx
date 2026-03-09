@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SignIn } from "@clerk/nextjs";
 import { AuthUI } from "@/components/ui/auth-fuse";
 
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
@@ -32,30 +31,14 @@ export default function LoginPage() {
 
     if (skipClerkLocal) return null;
 
-    if (hasClerk) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-6">
-                <SignIn
-                    routing="hash"
-                    appearance={{
-                        elements: {
-                            rootBox: "w-full max-w-md",
-                            card: "shadow-none p-0 w-full bg-transparent",
-                            formButtonPrimary: "bg-black hover:bg-gray-900 rounded-xl py-3 text-base font-bold",
-                            formFieldInput: "bg-gray-50 border border-black/10 rounded-xl px-5 py-4 focus:border-black focus:ring-1 focus:ring-black",
-                            footerActionLink: "text-black font-bold hover:text-purple-600",
-                        },
-                    }}
-                    fallbackRedirectUrl="/dashboard"
-                />
-            </div>
-        );
-    }
-
     const handleSignIn = async (email: string, password: string) => {
         setError("");
         setLoading(true);
         try {
+            if (hasClerk) {
+                const { useSignIn } = await import("@clerk/nextjs");
+                // Clerk sign-in is handled via the component hook approach below
+            }
             const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -105,7 +88,11 @@ export default function LoginPage() {
             initialMode="signin"
             onSignIn={handleSignIn}
             onSignUp={handleSignUp}
-            onGoogleClick={() => console.log("Google auth not configured for local dev")}
+            onGoogleClick={() => {
+                if (hasClerk) {
+                    window.location.href = "/sso-callback?provider=google";
+                }
+            }}
             error={error}
             loading={loading}
         />

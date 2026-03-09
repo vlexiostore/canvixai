@@ -10,7 +10,9 @@ import {
   Trash2,
   ArrowLeft,
   X,
+  Shield,
 } from "lucide-react";
+import { isAdmin } from "@/lib/admin";
 
 interface ConversationItem {
   id: string;
@@ -28,6 +30,8 @@ interface SidebarProps {
   pageMode: "chat" | "studio";
   collapsed: boolean;
   onToggle: () => void;
+  /** When provided and user is admin, show Admin link in sidebar */
+  userEmail?: string | null;
 }
 
 export function Sidebar({
@@ -39,7 +43,9 @@ export function Sidebar({
   pageMode,
   collapsed,
   onToggle,
+  userEmail,
 }: SidebarProps) {
+  const showAdmin = userEmail != null && isAdmin(userEmail);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -123,6 +129,15 @@ export function Sidebar({
         >
           <PlusCircle size={20} />
         </button>
+        {showAdmin && (
+          <a
+            href="/admin"
+            className="text-amber-400/90 hover:text-amber-300 transition-colors p-2"
+            title="Admin"
+          >
+            <Shield size={20} />
+          </a>
+        )}
       </aside>
     );
   }
@@ -166,6 +181,16 @@ export function Sidebar({
           <ArrowLeft size={18} />
           <span>Back to Dashboard</span>
         </a>
+
+        {showAdmin && (
+          <a
+            href="/admin"
+            className="flex items-center gap-3 text-amber-400/90 hover:text-amber-300 hover:bg-[#1a1a1a] w-full p-2.5 rounded-lg transition-colors text-sm"
+          >
+            <Shield size={18} />
+            <span>Admin</span>
+          </a>
+        )}
       </div>
 
       {/* Conversation List */}
