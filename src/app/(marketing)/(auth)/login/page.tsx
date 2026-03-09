@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AuthUI } from "@/components/ui/auth-fuse";
+import Link from "next/link";
+import { Github } from "lucide-react";
+import { SignIn } from "@clerk/nextjs";
 
 const clerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const skipClerkLocal = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
@@ -10,14 +12,60 @@ const hasClerk = clerkPub.startsWith("pk_") && clerkPub.length > 10 && !skipCler
 
 export default function LoginPage() {
     const router = useRouter();
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (skipClerkLocal) {
             router.replace("/dashboard");
-            return;
         }
+    }, [router]);
+
+    if (hasClerk) {
+        return (
+            <div className="py-8">
+                <div className="mb-6">
+                    <h1 className="font-display font-bold text-4xl mb-3">Welcome Back</h1>
+                    <p className="text-black/50 text-base">Sign in to continue creating.</p>
+                </div>
+                <SignIn
+                    routing="hash"
+                    appearance={{
+                        elements: {
+                            rootBox: "w-full",
+                            card: "shadow-none p-0 w-full bg-transparent",
+                            headerTitle: "hidden",
+                            headerSubtitle: "hidden",
+                            socialButtonsBlockButton: "border border-black/10 rounded-xl py-3 hover:bg-gray-50",
+                            formButtonPrimary: "bg-black hover:bg-gray-900 rounded-xl py-3 text-base font-bold",
+                            formFieldInput: "bg-gray-50 border border-black/10 rounded-xl px-5 py-4 focus:border-black focus:ring-1 focus:ring-black",
+                            footerActionLink: "text-black font-bold hover:text-purple-600",
+                            formFieldLabel: "text-sm font-semibold text-black/70",
+                        },
+                    }}
+                    fallbackRedirectUrl="/dashboard"
+                />
+                <div className="mt-6 text-center text-sm text-black/50">
+                    Don&apos;t have an account?{" "}
+                    <Link href="/signup" className="text-black hover:text-brand-orange font-bold transition-colors">
+                        Sign Up
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (skipClerkLocal) return null;
+
+    return <LocalLoginForm />;
+}
+
+function LocalLoginForm() {
+    const router = useRouter();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
         try {
             const raw = localStorage.getItem("canvix_user");
             if (raw) {
@@ -29,52 +77,26 @@ export default function LoginPage() {
         } catch { /* ignore */ }
     }, [router]);
 
-    if (skipClerkLocal) return null;
-
-    const handleSignIn = async (email: string, password: string) => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         setError("");
         setLoading(true);
+
         try {
-            if (hasClerk) {
-                const { useSignIn } = await import("@clerk/nextjs");
-                // Clerk sign-in is handled via the component hook approach below
-            }
             const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             });
+
             const json = await res.json();
+
             if (!json.success) {
                 setError(json.error?.message || "Login failed");
                 setLoading(false);
                 return;
             }
-            localStorage.setItem("canvix_user", JSON.stringify(json.data));
-            router.replace("/dashboard");
-        } catch {
-            setError("Something went wrong. Please try again.");
-            setLoading(false);
-        }
-    };
 
-    const handleSignUp = async (name: string, email: string, password: string) => {
-        setError("");
-        setLoading(true);
-        const [firstName, ...rest] = name.split(" ");
-        const lastName = rest.join(" ");
-        try {
-            const res = await fetch("/api/auth/signup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ firstName, lastName, email, password }),
-            });
-            const json = await res.json();
-            if (!json.success) {
-                setError(json.error?.message || "Signup failed");
-                setLoading(false);
-                return;
-            }
             localStorage.setItem("canvix_user", JSON.stringify(json.data));
             router.replace("/dashboard");
         } catch {
@@ -84,17 +106,71 @@ export default function LoginPage() {
     };
 
     return (
-        <AuthUI
-            initialMode="signin"
-            onSignIn={handleSignIn}
-            onSignUp={handleSignUp}
-            onGoogleClick={() => {
-                if (hasClerk) {
-                    window.location.href = "/sso-callback?provider=google";
-                }
-            }}
-            error={error}
-            loading={loading}
-        />
+        <div className="py-8">
+            <div className="mb-8">
+                <h1 className="font-display font-bold text-4xl mb-3">Welcome Back</h1>
+                <p className="text-black/50 text-base">Sign in to continue creating.</p>
+            </div>
+
+            {error && (
+                <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+                    {error}
+                </div>
+            )}
+
+            <form className="space-y-6" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold text-black/70 ml-1">Email</label>
+                    <input
+                        type="email"
+                        placeholder="creator@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="w-full bg-gray-50 border border-black/10 rounded-xl px-5 py-4 text-black placeholder:text-black/30 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <div className="flex justify-between px-1">
+                        <label className="text-sm font-semibold text-black/70">Password</label>
+                        <Link href="#" className="text-xs font-semibold text-brand-orange hover:text-brand-pink transition-colors">Forgot Password?</Link>
+                    </div>
+                    <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full bg-gray-50 border border-black/10 rounded-xl px-5 py-4 text-black placeholder:text-black/30 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg shadow-lg hover:bg-gray-900 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading ? "Signing in..." : "Sign In"}
+                </button>
+            </form>
+
+            <div className="my-8 flex items-center gap-4 text-xs text-black/20 uppercase font-bold tracking-widest">
+                <div className="h-px flex-1 bg-black/10" />
+                OR
+                <div className="h-px flex-1 bg-black/10" />
+            </div>
+
+            <button className="w-full py-4 border border-black/10 rounded-xl font-semibold text-black hover:bg-gray-50 hover:border-black/30 transition-all flex items-center justify-center gap-2">
+                <Github size={20} />
+                Continue with GitHub
+            </button>
+
+            <div className="mt-8 text-center text-sm text-black/50">
+                Don&apos;t have an account?{" "}
+                <Link href="/signup" className="text-black hover:text-brand-orange font-bold transition-colors">
+                    Sign Up
+                </Link>
+            </div>
+        </div>
     );
 }
