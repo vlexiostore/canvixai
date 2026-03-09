@@ -8,6 +8,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  );
+}
+
 export interface TypewriterProps {
   text: string | string[];
   speed?: number;
@@ -285,17 +296,21 @@ function AuthFormContainer({
         ? <SignInForm onSubmit={onSignIn} error={error} loading={loading} />
         : <SignUpForm onSubmit={onSignUp} error={error} loading={loading} />
       }
-      <div className="text-center text-sm">
+      <div className="text-center text-sm text-muted-foreground">
         {isSignIn ? "Don't have an account?" : "Already have an account?"}{" "}
-        <Button variant="link" className="pl-1 text-foreground" onClick={onToggle}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="font-medium text-primary hover:text-primary/90 underline-offset-4 hover:underline focus:outline-none focus:ring-0"
+        >
           {isSignIn ? "Sign up" : "Sign in"}
-        </Button>
+        </button>
       </div>
       <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
         <span className="relative z-10 bg-background px-2 text-muted-foreground">Or continue with</span>
       </div>
-      <Button variant="outline" type="button" onClick={onGoogleClick}>
-        <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google icon" className="mr-2 h-4 w-4" />
+      <Button variant="outline" type="button" onClick={onGoogleClick} className="gap-2">
+        <GoogleIcon className="h-4 w-4 shrink-0" />
         Continue with Google
       </Button>
     </div>
@@ -305,6 +320,8 @@ function AuthFormContainer({
 interface AuthContentProps {
   image?: { src: string; alt: string };
   quote?: { text: string; author: string };
+  /** Short tagline shown above the quote — different for signin vs signup */
+  tagline?: string;
 }
 
 export interface AuthUIProps {
@@ -323,8 +340,9 @@ const defaultSignInContent = {
     src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&q=80",
     alt: "Abstract colorful art",
   },
+  tagline: "Your creative workspace awaits.",
   quote: {
-    text: "Welcome Back! The journey continues.",
+    text: "Welcome back! The journey continues.",
     author: "Canvix AI",
   },
 };
@@ -334,6 +352,7 @@ const defaultSignUpContent = {
     src: "https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?w=1200&q=80",
     alt: "Abstract gradient waves",
   },
+  tagline: "Join millions of creators worldwide.",
   quote: {
     text: "Create an account. A new chapter awaits.",
     author: "Canvix AI",
@@ -357,10 +376,12 @@ export function AuthUI({
 
   const finalSignInContent = {
     image: { ...defaultSignInContent.image, ...signInContent.image },
+    tagline: signInContent.tagline ?? defaultSignInContent.tagline,
     quote: { ...defaultSignInContent.quote, ...signInContent.quote },
   };
   const finalSignUpContent = {
     image: { ...defaultSignUpContent.image, ...signUpContent.image },
+    tagline: signUpContent.tagline ?? defaultSignUpContent.tagline,
     quote: { ...defaultSignUpContent.quote, ...signUpContent.quote },
   };
 
@@ -391,11 +412,18 @@ export function AuthUI({
         style={{ backgroundImage: `url(${currentContent.image.src})` }}
         key={currentContent.image.src}
       >
-        <div className="absolute inset-x-0 bottom-0 h-[100px] bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[120px] bg-gradient-to-t from-background to-transparent" />
 
-        <div className="relative z-10 flex h-full flex-col items-center justify-end p-2 pb-6">
-          <blockquote className="space-y-2 text-center text-foreground">
-            <p className="text-lg font-medium">
+        <div className="relative z-10 flex h-full flex-col items-center justify-between p-8 pb-10">
+          <div className="text-center">
+            <span className="text-2xl font-bold tracking-tight text-white drop-shadow-md">Canvix</span>
+            <p className="mt-2 text-sm font-medium text-white/80">
+              {currentContent.tagline}
+            </p>
+          </div>
+
+          <blockquote className="space-y-2 text-center text-foreground max-w-sm">
+            <p className="text-lg font-medium drop-shadow-sm">
               &ldquo;<Typewriter
                 key={currentContent.quote.text}
                 text={currentContent.quote.text}
