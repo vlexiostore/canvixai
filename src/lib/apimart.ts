@@ -59,11 +59,11 @@ Ask for clarification if the request is ambiguous.`,
 // ---- Available models ----
 
 export const AVAILABLE_MODELS = [
-  { id: "gpt-5", label: "Canvix 2.0", description: "Balanced performance" },
-  { id: "gpt-5-chat-latest", label: "Canvix 2.5 RC", description: "Latest chat model" },
-  { id: "gpt-5-mini", label: "Canvix Mini", description: "Fast & cost-effective" },
-  { id: "gpt-5-nano", label: "Canvix Nano", description: "Ultra-fast, lightweight" },
-  { id: "gpt-5-pro", label: "Canvix Ultra", description: "Maximum quality" },
+  { id: "gpt-5", label: "GPT-5", description: "Balanced performance" },
+  { id: "gpt-5-chat-latest", label: "GPT-5 Latest", description: "Latest chat model" },
+  { id: "gpt-5-mini", label: "GPT-5 Mini", description: "Fast & cost-effective" },
+  { id: "gpt-5-nano", label: "GPT-5 Nano", description: "Ultra-fast, lightweight" },
+  { id: "gpt-5-pro", label: "GPT-5 Pro", description: "Maximum quality" },
 ] as const;
 
 export const DEFAULT_MODEL = "gpt-5-mini";

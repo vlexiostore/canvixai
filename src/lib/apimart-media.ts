@@ -66,21 +66,21 @@ async function fetchWithRetry(
 export const IMAGE_MODELS = [
   {
     id: "gemini-2.5-flash-image-preview",
-    label: "Canvix Flash",
+    label: "Gemini 2.5 Flash",
     description: "Fast generation",
     icon: "⚡",
     resolutions: ["1K"],
   },
   {
     id: "gemini-3-pro-image-preview",
-    label: "Canvix Pro",
+    label: "Gemini 3 Pro",
     description: "High quality",
     icon: "✨",
     resolutions: ["1K", "2K", "4K"],
   },
   {
     id: "doubao-seedance-4-5",
-    label: "Canvix HD",
+    label: "Seedream 4.5",
     description: "Ultra HD, multi-mode",
     icon: "💎",
     resolutions: ["2K", "4K"],
@@ -95,7 +95,7 @@ export const VALID_IMAGE_MODEL_IDS = IMAGE_MODELS.map((m) => m.id);
 export const VIDEO_MODELS = [
   {
     id: "kling-v2-6",
-    label: "Canvix Video Ultra",
+    label: "Kling v2.6",
     description: "5-10s, 1080p pro, image-to-video, audio",
     icon: "👑",
     durations: [5, 10],
@@ -106,7 +106,7 @@ export const VIDEO_MODELS = [
   },
   {
     id: "wan2.6",
-    label: "Canvix Video Pro",
+    label: "Wan 2.6",
     description: "5-15s, image-to-video supported",
     icon: "🎥",
     durations: [5, 10, 15],
@@ -117,14 +117,58 @@ export const VIDEO_MODELS = [
   },
   {
     id: "veo3.1-fast",
-    label: "Canvix Video Fast",
-    description: "8s, up to 4K, text-to-video only",
+    label: "Veo 3.1 Fast",
+    description: "8s, up to 4K, text-to-video, audio",
     icon: "🎬",
     durations: [8],
     resolutions: ["720p", "1080p", "4k"],
     aspectRatios: ["16:9", "9:16"],
     supportsImageRef: false,
     supportsAudio: false,
+  },
+  {
+    id: "veo3.1-quality",
+    label: "Veo 3.1 Quality",
+    description: "8s, 1080p, premium cinematic output",
+    icon: "🎞️",
+    durations: [8],
+    resolutions: ["720p", "1080p"],
+    aspectRatios: ["16:9", "9:16"],
+    supportsImageRef: false,
+    supportsAudio: false,
+  },
+  {
+    id: "doubao-seedance-1-0-pro-fast",
+    label: "Seedance 1.0 Pro Fast",
+    description: "Fast turbo mode, image-to-video",
+    icon: "🌱",
+    durations: [5, 10],
+    resolutions: ["720p", "1080p"],
+    aspectRatios: ["16:9", "9:16", "1:1"],
+    supportsImageRef: true,
+    supportsAudio: false,
+  },
+  {
+    id: "doubao-seedance-1-5-pro",
+    label: "Seedance 1.5 Pro",
+    description: "Smoother motion, ultra-clear, image-to-video, audio",
+    icon: "🌿",
+    durations: [5, 10],
+    resolutions: ["720p", "1080p"],
+    aspectRatios: ["16:9", "9:16", "1:1"],
+    supportsImageRef: true,
+    supportsAudio: true,
+  },
+  {
+    id: "sora-2-pro",
+    label: "Sora 2 Pro",
+    description: "Up to 25s, 1024p, cinematic, audio",
+    icon: "🎥",
+    durations: [5, 10, 15, 20, 25],
+    resolutions: ["720p", "1080p"],
+    aspectRatios: ["16:9", "9:16", "1:1"],
+    supportsImageRef: true,
+    supportsAudio: true,
   },
 ] as const;
 
@@ -228,8 +272,10 @@ export async function submitVideoGeneration(params: {
   let model = params.model;
   const hasRefs = params.imageUrls && params.imageUrls.length > 0;
 
-  if (hasRefs && model === "veo3.1-fast") {
-    console.log("Image-to-video: switching from veo3.1-fast to kling-v2-6 (supports image refs)");
+  // Models that don't support image refs — auto-switch to kling-v2-6
+  const noRefModels = ["veo3.1-fast", "veo3.1-quality"];
+  if (hasRefs && noRefModels.includes(model)) {
+    console.log(`Image-to-video: switching from ${model} to kling-v2-6 (supports image refs)`);
     model = "kling-v2-6";
   }
 
@@ -239,24 +285,15 @@ export async function submitVideoGeneration(params: {
   };
 
   if (model === "kling-v2-6") {
-    // Kling v2.6: mode std=720p, pro=1080p
     const isPro = params.resolution === "1080p";
     body.mode = isPro ? "pro" : "std";
     body.duration = params.duration === 10 ? 10 : 5;
     body.aspect_ratio = params.aspectRatio || "16:9";
-
-    if (params.negativePrompt) {
-      body.negative_prompt = params.negativePrompt;
-    }
-
-    // Audio only available in pro mode, and mutually exclusive with last-frame (2 images)
-    if (isPro && params.audio && (!hasRefs || params.imageUrls!.length <= 1)) {
-      body.audio = true;
-    }
-
+    if (params.negativePrompt) body.negative_prompt = params.negativePrompt;
+    if (isPro && params.audio && (!hasRefs || params.imageUrls!.length <= 1)) body.audio = true;
     body.watermark = false;
   } else if (model === "veo3.1-fast" || model === "veo3.1-quality") {
-    body.duration = 8; // VEO3 only supports 8s
+    body.duration = 8;
     body.aspect_ratio = params.aspectRatio || "16:9";
     body.resolution = params.resolution || "720p";
   } else if (model === "wan2.6") {
@@ -265,11 +302,24 @@ export async function submitVideoGeneration(params: {
     body.resolution = params.resolution || "720p";
     body.prompt_extend = true;
     body.watermark = false;
+  } else if (model === "doubao-seedance-1-0-pro-fast" || model === "doubao-seedance-1-0-pro-quality") {
+    body.duration = params.duration || 5;
+    body.aspect_ratio = params.aspectRatio || "16:9";
+    body.resolution = params.resolution || "720p";
+  } else if (model === "doubao-seedance-1-5-pro") {
+    body.duration = params.duration || 5;
+    body.aspect_ratio = params.aspectRatio || "16:9";
+    body.resolution = params.resolution || "720p";
+    if (params.audio) body.audio = true;
+  } else if (model === "sora-2-pro" || model === "sora-2-pro-preview") {
+    body.duration = params.duration || 10;
+    body.aspect_ratio = params.aspectRatio || "16:9";
   }
 
   if (hasRefs) {
-    // Kling supports max 2 images (first frame + optional last frame in pro)
     if (model === "kling-v2-6") {
+      body.image_urls = params.imageUrls!.slice(0, 2);
+    } else if (model === "doubao-seedance-1-5-pro") {
       body.image_urls = params.imageUrls!.slice(0, 2);
     } else {
       body.image_urls = params.imageUrls;

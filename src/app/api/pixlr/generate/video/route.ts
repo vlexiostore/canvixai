@@ -34,8 +34,46 @@ const requestSchema = z.object({
   audio: z.boolean().optional().default(false),
 });
 
+const isLocalDev = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
+
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json();
+    const data = requestSchema.parse(body);
+
+    const hasRefs = data.imageUrls && data.imageUrls.length > 0;
+
+    let model = VALID_VIDEO_MODEL_IDS.includes(data.model as any)
+      ? data.model
+      : DEFAULT_VIDEO_MODEL;
+
+    const noRefModels = ["veo3.1-fast", "veo3.1-quality"];
+    if (hasRefs && noRefModels.includes(model)) {
+      model = "kling-v2-6";
+    }
+
+    const duration = model.startsWith("veo3") ? 8 : data.duration;
+
+    if (isLocalDev) {
+      const { taskId } = await submitVideoGeneration({
+        model,
+        prompt: data.prompt,
+        duration,
+        aspectRatio: data.aspectRatio,
+        resolution: data.resolution,
+        imageUrls: data.imageUrls,
+        negativePrompt: data.negativePrompt,
+        audio: data.audio,
+      });
+
+      return successResponse({
+        jobId: `apimart_${taskId}`,
+        status: "processing",
+        taskId,
+        estimatedTime: hasRefs ? 90 : 60,
+      });
+    }
+
     await connectDB();
     const user = await getOrCreateUser();
 
@@ -43,21 +81,6 @@ export async function POST(req: NextRequest) {
       throw new APIError(ErrorCodes.RATE_LIMITED, "Too many requests", 429);
     }
 
-    const body = await req.json();
-    const data = requestSchema.parse(body);
-
-    const hasRefs = data.imageUrls && data.imageUrls.length > 0;
-
-    // Validate model — if reference images are provided, force wan2.6 (image-to-video support)
-    let model = VALID_VIDEO_MODEL_IDS.includes(data.model as any)
-      ? data.model
-      : DEFAULT_VIDEO_MODEL;
-
-    if (hasRefs && model === "veo3.1-fast") {
-      model = "kling-v2-6"; // veo3 doesn't support image refs, use kling instead
-    }
-
-    // Determine job type for credits
     const jobType = hasRefs ? "image-to-video" : "video-gen";
     const cost = getCreditCost(jobType);
     if (!(await checkCredits(user._id, cost, jobType))) {
@@ -68,11 +91,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Adjust duration for VEO3 (fixed at 8s)
-    const duration =
-      model.startsWith("veo3") ? 8 : data.duration;
-
-    // Submit to APIMart (retry logic built-in for 429)
     const { taskId } = await submitVideoGeneration({
       model,
       prompt: data.prompt,
@@ -84,10 +102,9 @@ export async function POST(req: NextRequest) {
       audio: data.audio,
     });
 
-    // Create job as processing
     const job = await Job.create({
       userId: user._id,
-      type: jobType,
+      type: hasRefs ? "image-to-video" : "video-gen",
       status: "processing",
       inputData: {
         prompt: data.prompt,
@@ -106,7 +123,6 @@ export async function POST(req: NextRequest) {
       startedAt: new Date(),
     });
 
-    // Deduct credits immediately
     await deductCredits(user._id, jobType, job._id);
 
     return successResponse({

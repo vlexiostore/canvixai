@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/chat/Sidebar";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { SuggestionCards } from "@/components/chat/SuggestionCards";
 import { ModelDropdown } from "@/components/chat/ModelDropdown";
+import { ImageGeneration } from "@/components/ui/ai-chat-image-generation-1";
 
 /**
  * Canvix AI — dual-purpose interface
@@ -59,23 +60,27 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
   // ─── Model Definitions ──────────────────────────────────
   const chatModels = [
-    { id: "gpt-5", label: "Canvix 2.0", description: "Balanced", icon: "⚡" },
-    { id: "gpt-5-chat-latest", label: "Canvix 2.5 RC", description: "Latest", icon: "🧪" },
-    { id: "gpt-5-mini", label: "Canvix Mini", description: "Fast & efficient", icon: "🚀" },
-    { id: "gpt-5-nano", label: "Canvix Nano", description: "Ultra-fast", icon: "💨" },
-    { id: "gpt-5-pro", label: "Canvix Ultra", description: "Maximum quality", icon: "👑" },
+    { id: "gpt-5", label: "GPT-5", description: "Balanced", icon: "⚡" },
+    { id: "gpt-5-chat-latest", label: "GPT-5 Latest", description: "Latest", icon: "🧪" },
+    { id: "gpt-5-mini", label: "GPT-5 Mini", description: "Fast & efficient", icon: "🚀" },
+    { id: "gpt-5-nano", label: "GPT-5 Nano", description: "Ultra-fast", icon: "💨" },
+    { id: "gpt-5-pro", label: "GPT-5 Pro", description: "Maximum quality", icon: "👑" },
   ];
 
   const imageGenModels = [
-    { id: "gemini-2.5-flash-image-preview", label: "Canvix Flash", description: "Fast image gen", icon: "⚡" },
-    { id: "gemini-3-pro-image-preview", label: "Canvix Pro", description: "High quality", icon: "✨" },
-    { id: "doubao-seedance-4-5", label: "Canvix HD", description: "Ultra HD", icon: "💎" },
+    { id: "gemini-2.5-flash-image-preview", label: "Gemini 2.5 Flash", description: "Fast image gen", icon: "⚡" },
+    { id: "gemini-3-pro-image-preview", label: "Gemini 3 Pro", description: "High quality", icon: "✨" },
+    { id: "doubao-seedance-4-5", label: "Seedream 4.5", description: "Ultra HD", icon: "💎" },
   ];
 
   const videoGenModels = [
-    { id: "kling-v2-6", label: "Canvix Video Ultra", description: "5-10s, 1080p, image-to-video, audio", icon: "👑", durations: [5, 10], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: true },
-    { id: "wan2.6", label: "Canvix Video Pro", description: "5-15s, image-to-video", icon: "🎥", durations: [5, 10, 15], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: false },
-    { id: "veo3.1-fast", label: "Canvix Video Fast", description: "8s, text-to-video only", icon: "🎬", durations: [8], resolutions: ["720p", "1080p", "4k"], supportsImageRef: false, supportsAudio: false },
+    { id: "kling-v2-6", label: "Kling v2.6", description: "5-10s, 1080p, image-to-video, audio", icon: "👑", durations: [5, 10], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: true },
+    { id: "wan2.6", label: "Wan 2.6", description: "5-15s, image-to-video", icon: "🎥", durations: [5, 10, 15], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: false },
+    { id: "veo3.1-fast", label: "Veo 3.1 Fast", description: "8s, up to 4K, audio", icon: "🎬", durations: [8], resolutions: ["720p", "1080p", "4k"], supportsImageRef: false, supportsAudio: false },
+    { id: "veo3.1-quality", label: "Veo 3.1 Quality", description: "8s, 1080p, premium", icon: "🎞️", durations: [8], resolutions: ["720p", "1080p"], supportsImageRef: false, supportsAudio: false },
+    { id: "doubao-seedance-1-0-pro-fast", label: "Seedance 1.0 Pro Fast", description: "Fast turbo, image-to-video", icon: "🌱", durations: [5, 10], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: false },
+    { id: "doubao-seedance-1-5-pro", label: "Seedance 1.5 Pro", description: "Smooth motion, image-to-video, audio", icon: "🌿", durations: [5, 10], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: true },
+    { id: "sora-2-pro", label: "Sora 2 Pro", description: "Up to 25s, 1024p, cinematic, audio", icon: "🎥", durations: [5, 10, 15, 20, 25], resolutions: ["720p", "1080p"], supportsImageRef: true, supportsAudio: true },
   ];
 
   const currentImageModel = imageGenModels.find((m) => m.id === selectedImageModel) || imageGenModels[0];
@@ -279,10 +284,14 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
       }
 
       const result = await pollJobStatus(json.data.jobId);
-    return {
-        success: result.status === "completed",
+      const resultUrl = result.result?.url || "";
+      if (result.status === "completed" && !resultUrl) {
+        return { success: false, type, url: "", prompt, error: "Video generated but no download URL was returned. Please try again." };
+      }
+      return {
+        success: result.status === "completed" && !!resultUrl,
         type,
-        url: result.result?.url || "",
+        url: resultUrl,
         prompt,
         error: result.error,
       };
@@ -358,6 +367,7 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
         type: "assistant",
         text: `Generating your ${genType}${refCount > 0 ? ` (with ${refCount} reference${refCount > 1 ? "s" : ""})` : ""}...`,
         isGenerating: true,
+        generationType: genType,
         timestamp: new Date(),
       }]);
 
@@ -445,10 +455,19 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
     // Download
     if (lower === "download") {
-      const lastGen = [...messages].reverse().find((m) => m.generatedContent?.url);
-      if (lastGen?.generatedContent) {
+      const lastGen = [...messages].reverse().find((m) => m.generatedContent);
+      if (lastGen?.generatedContent?.url) {
         const ext = lastGen.generatedContent.type === "video" ? "mp4" : "png";
         handleDownload(lastGen.generatedContent.url, `canvix-${Date.now()}.${ext}`);
+      } else if (lastGen?.generatedContent) {
+        window.open(lastGen.generatedContent.url || "", "_blank");
+        setMessages((prev) => [...prev, {
+          id: Date.now(),
+          type: "assistant",
+          text: "The download URL isn't available. This can happen if the video is still processing or the generation service didn't return a link. Try **Create another** to regenerate.",
+          suggestions: ["Create another"],
+          timestamp: new Date(),
+        }]);
       }
       return;
     }
@@ -654,14 +673,20 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
                         </div>
                         <div className="max-w-[90%] sm:max-w-[80%] space-y-3">
                           {msg.isGenerating ? (
-                            <div className="space-y-2">
-                              <p className="text-[15px] text-gray-300">{msg.text}</p>
-                              <div className="flex gap-1">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                            msg.generationType === "image" ? (
+                              <ImageGeneration duration={60000}>
+                                <div className="w-full max-w-[400px] aspect-square rounded-xl bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] animate-pulse" />
+                              </ImageGeneration>
+                            ) : (
+                              <div className="space-y-2">
+                                <p className="text-[15px] text-gray-300">{msg.text}</p>
+                                <div className="flex gap-1">
+                                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                                </div>
                               </div>
-                        </div>
+                            )
                       ) : (
                         <>
                           <div
@@ -675,31 +700,66 @@ export default function CreativeAIChatPage({ user, pageMode = "studio", onSwitch
 
                           {/* Generated Content */}
                               {msg.generatedContent && (
-                                <div className="rounded-xl overflow-hidden border border-[#2a2a2a] relative group/media">
+                                <div className="relative group/media">
                                   {msg.generatedContent.type === "image" ? (
                                     msg.generatedContent.url ? (
-                                      <img src={msg.generatedContent.url} alt={msg.generatedContent.prompt || "Generated"} className="w-full max-w-[400px] rounded-xl" />
+                                      <ImageGeneration duration={4000}>
+                                        <img src={msg.generatedContent.url} alt={msg.generatedContent.prompt || "Generated"} className="w-full max-w-[400px] object-cover aspect-auto" />
+                                      </ImageGeneration>
                                     ) : (
-                                      <div className="w-full max-w-[400px] aspect-square bg-gradient-to-br from-purple-500 to-orange-400 flex items-center justify-center text-5xl">🖼️</div>
+                                      <div className="w-full max-w-[400px] aspect-square rounded-xl overflow-hidden border border-[#2a2a2a] bg-gradient-to-br from-purple-500 to-orange-400 flex items-center justify-center text-5xl">🖼️</div>
                                     )
-                                  ) : msg.generatedContent.url ? (
-                                    <video src={msg.generatedContent.url} controls className="w-full max-w-[500px] rounded-xl" />
                                   ) : (
-                                    <div className="w-full max-w-[500px] aspect-video bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center">
-                                      <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center text-2xl">▶</div>
-                                </div>
-                              )}
+                                    <div className="rounded-xl overflow-hidden border border-[#2a2a2a]">
+                                      {msg.generatedContent.url ? (
+                                        <video
+                                          src={msg.generatedContent.url}
+                                          controls
+                                          playsInline
+                                          preload="metadata"
+                                          className="w-full max-w-[500px]"
+                                          onError={(e) => {
+                                            const vid = e.currentTarget;
+                                            vid.style.display = "none";
+                                            const fallback = vid.nextElementSibling;
+                                            if (fallback) fallback.style.display = "flex";
+                                          }}
+                                        />
+                                      ) : null}
+                                      {msg.generatedContent.type === "video" && (
+                                        <div
+                                          className="w-full max-w-[500px] aspect-video bg-gradient-to-br from-purple-500 to-pink-400 items-center justify-center cursor-pointer"
+                                          style={{ display: msg.generatedContent.url ? "none" : "flex" }}
+                                          onClick={() => msg.generatedContent.url && window.open(msg.generatedContent.url, "_blank")}
+                                        >
+                                          <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center text-2xl">▶</div>
+                                          {!msg.generatedContent.url && <p className="absolute bottom-3 text-xs text-white/60">No video URL available</p>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                   {msg.generatedContent.url && (
-                                    <button
-                                      onClick={() => {
-                                        const ext = msg.generatedContent.type === "video" ? "mp4" : "png";
-                                        handleDownload(msg.generatedContent.url, `canvix-${Date.now()}.${ext}`);
-                                      }}
-                                      className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-lg text-white opacity-0 group-hover/media:opacity-100 transition-opacity"
-                                      title="Download"
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    </button>
+                                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover/media:opacity-100 transition-opacity">
+                                      <a
+                                        href={msg.generatedContent.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-lg text-white"
+                                        title="Open in new tab"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                      </a>
+                                      <button
+                                        onClick={() => {
+                                          const ext = msg.generatedContent.type === "video" ? "mp4" : "png";
+                                          handleDownload(msg.generatedContent.url, `canvix-${Date.now()}.${ext}`);
+                                        }}
+                                        className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-lg text-white"
+                                        title="Download"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                      </button>
+                                    </div>
                                   )}
                             </div>
                           )}

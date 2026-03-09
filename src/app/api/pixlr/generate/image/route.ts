@@ -41,22 +41,43 @@ const requestSchema = z.object({
   imageUrls: z.array(z.string()).optional(),
 });
 
+const isLocalDev = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
+
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json();
+    const data = requestSchema.parse(body);
+
+    const model = VALID_IMAGE_MODEL_IDS.includes(data.model as any)
+      ? data.model
+      : DEFAULT_IMAGE_MODEL;
+
+    const resolution = qualityToResolution(data.quality, model);
+
+    if (isLocalDev) {
+      const { taskId } = await submitImageGeneration({
+        model,
+        prompt: data.prompt,
+        size: data.aspectRatio,
+        resolution,
+        n: data.numImages,
+        imageUrls: data.imageUrls,
+      });
+
+      return successResponse({
+        jobId: `apimart_${taskId}`,
+        status: "processing",
+        taskId,
+        estimatedTime: 30,
+      });
+    }
+
     await connectDB();
     const user = await getOrCreateUser();
 
     if (!checkRateLimit(user._id.toString(), user.plan)) {
       throw new APIError(ErrorCodes.RATE_LIMITED, "Too many requests", 429);
     }
-
-    const body = await req.json();
-    const data = requestSchema.parse(body);
-
-    // Validate model — fall back to default
-    const model = VALID_IMAGE_MODEL_IDS.includes(data.model as any)
-      ? data.model
-      : DEFAULT_IMAGE_MODEL;
 
     const cost = getCreditCost("image-gen");
     if (!(await checkCredits(user._id, cost, "image-gen"))) {
@@ -67,10 +88,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Map quality to APIMart resolution
-    const resolution = qualityToResolution(data.quality, model);
-
-    // Submit to APIMart
     const { taskId } = await submitImageGeneration({
       model,
       prompt: data.prompt,
@@ -80,7 +97,6 @@ export async function POST(req: NextRequest) {
       imageUrls: data.imageUrls,
     });
 
-    // Create job as processing
     const job = await Job.create({
       userId: user._id,
       type: "image-gen",
@@ -101,7 +117,6 @@ export async function POST(req: NextRequest) {
       startedAt: new Date(),
     });
 
-    // Deduct credits immediately
     await deductCredits(user._id, "image-gen", job._id);
 
     return successResponse({

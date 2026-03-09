@@ -11,14 +11,54 @@ import { getApimartTaskStatus, extractResultUrl } from "@/lib/apimart-media";
 import { refundCredits } from "@/lib/credits";
 import Job from "@/models/Job";
 
+const isLocalDev = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params;
+
+    if (isLocalDev && jobId.startsWith("apimart_")) {
+      const taskId = jobId.replace("apimart_", "");
+      const taskStatus = await getApimartTaskStatus(taskId);
+
+      if (taskStatus.status === "completed") {
+        const resultUrl = extractResultUrl(taskStatus);
+        return successResponse({
+          jobId,
+          status: "completed",
+          type: "image-gen",
+          progress: 100,
+          result: resultUrl ? { url: resultUrl, metadata: { apimartActualTime: taskStatus.actual_time } } : undefined,
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        });
+      }
+
+      if (taskStatus.status === "failed") {
+        return successResponse({
+          jobId,
+          status: "failed",
+          type: "image-gen",
+          error: taskStatus.error?.message || "Generation failed",
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        });
+      }
+
+      return successResponse({
+        jobId,
+        status: "processing",
+        type: "image-gen",
+        progress: taskStatus.progress || 0,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     await connectDB();
     const user = await getOrCreateUser();
-    const { jobId } = await params;
 
     const job = await Job.findOne({ _id: jobId, userId: user._id });
 
@@ -26,7 +66,6 @@ export async function GET(
       throw new APIError(ErrorCodes.JOB_NOT_FOUND, "Job not found", 404);
     }
 
-    // If the job is still processing and has an APIMart task_id, poll APIMart
     if (job.status === "processing" && job.pixlrJobId) {
       try {
         const taskStatus = await getApimartTaskStatus(job.pixlrJobId);
@@ -43,7 +82,6 @@ export async function GET(
             apimartActualTime: taskStatus.actual_time,
           };
 
-          // Extract thumbnail for videos
           if (taskStatus.result?.videos?.[0]?.thumbnail_url) {
             job.thumbnailUrl = taskStatus.result.videos[0].thumbnail_url;
           }
@@ -56,14 +94,12 @@ export async function GET(
           job.completedAt = new Date();
           await job.save();
 
-          // Refund credits on failure
           try {
             await refundCredits(user._id, job.type, job._id);
           } catch (refundErr) {
             console.error("Credit refund failed:", refundErr);
           }
         } else {
-          // Still processing -- update progress in metadata
           job.metadata = {
             ...job.metadata,
             apimartProgress: taskStatus.progress || 0,
@@ -73,7 +109,6 @@ export async function GET(
         }
       } catch (pollErr) {
         console.error("APIMart task polling error:", pollErr);
-        // Don't fail the request -- return cached job state
       }
     }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Section } from "@/components/ui/section";
 import { NanobanaImageGenSection } from "@/components/home/nanobana-image-gen";
 import { CollageMakerSection } from "@/components/home/collage-maker";
@@ -34,6 +36,20 @@ const HERO_IMAGES = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+
+  // Local auth: if already logged in, open tabs go to dashboard
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL !== "true") return;
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("canvix_user") : null;
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data?.userId || data?.email) router.replace("/dashboard");
+      }
+    } catch { /* ignore */ }
+  }, [router]);
+
   return (
     <>
       {/* Hero Section */}

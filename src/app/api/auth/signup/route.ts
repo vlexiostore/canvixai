@@ -13,6 +13,15 @@ const signupSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const uri = process.env.MONGODB_URI;
+    if (!uri || uri.trim() === "") {
+      throw new APIError(
+        ErrorCodes.INTERNAL_ERROR,
+        "Database is not configured. Add MONGODB_URI to .env.local (e.g. mongodb://localhost:27017/canvixai) and ensure MongoDB is running.",
+        503
+      );
+    }
+
     await connectDB();
 
     const body = await req.json();
@@ -43,6 +52,23 @@ export async function POST(req: NextRequest) {
         new APIError(ErrorCodes.INVALID_INPUT, "Invalid input", 400, error.issues)
       );
     }
-    return errorResponse(error as Error);
+    if (error instanceof APIError) {
+      return errorResponse(error);
+    }
+    const errMsg = error instanceof Error ? error.message : "";
+    const isConnectionError =
+      errMsg.includes("connect") ||
+      errMsg.includes("MongoNetworkError") ||
+      errMsg.includes("ECONNREFUSED") ||
+      errMsg.includes("querySrv");
+    const message = isConnectionError
+      ? errMsg.includes("querySrv") || errMsg.includes("ECONNREFUSED")
+        ? "Cannot reach MongoDB (DNS or network). If using Atlas, try the standard connection string (mongodb://...) in MONGODB_URI instead of mongodb+srv://, or check firewall/DNS."
+        : "Cannot connect to the database. Make sure MongoDB is running and MONGODB_URI in .env.local is correct."
+      : undefined;
+    console.error("Signup error:", error);
+    return errorResponse(
+      new APIError(ErrorCodes.INTERNAL_ERROR, message ?? "An unexpected error occurred", 500)
+    );
   }
 }

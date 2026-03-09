@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const skipAuthLocal = process.env.NEXT_PUBLIC_CLERK_DISABLED_FOR_LOCAL === "true";
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -49,11 +50,11 @@ export function Navbar() {
 
                 {/* Auth Buttons */}
                 <div className="hidden md:flex items-center gap-4">
-                    <Link href="/login" className="text-sm font-medium text-white/80 hover:text-white transition-colors">
-                        Log in
+                    <Link href={skipAuthLocal ? "/dashboard" : "/login"} className="text-sm font-medium text-white/80 hover:text-white transition-colors">
+                        {skipAuthLocal ? "Dashboard" : "Log in"}
                     </Link>
                     <Link
-                        href="/signup"
+                        href={skipAuthLocal ? "/dashboard" : "/signup"}
                         className="px-5 py-2.5 bg-white text-black rounded-full text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105"
                     >
                         Start Creating
@@ -87,11 +88,11 @@ export function Navbar() {
                                 </Link>
                             ))}
                             <hr className="border-white/10" />
-                            <Link href="/login" onClick={() => setIsOpen(false)} className="text-lg font-medium text-white/80">
-                                Log in
+                            <Link href={skipAuthLocal ? "/dashboard" : "/login"} onClick={() => setIsOpen(false)} className="text-lg font-medium text-white/80">
+                                {skipAuthLocal ? "Dashboard" : "Log in"}
                             </Link>
                             <Link
-                                href="/signup"
+                                href={skipAuthLocal ? "/dashboard" : "/signup"}
                                 onClick={() => setIsOpen(false)}
                                 className="text-lg font-medium text-brand-orange"
                             >
