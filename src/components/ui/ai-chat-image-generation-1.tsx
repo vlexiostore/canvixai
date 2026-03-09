@@ -10,8 +10,7 @@ export interface ImageGenerationProps {
   duration?: number;
 }
 
-export const ImageGeneration = (
-  ({ children, className, duration = 8000 }: ImageGenerationProps) => {
+export function ImageGeneration({ children, className, duration = 8000 }: ImageGenerationProps) {
     const [progress, setProgress] = React.useState(0);
     const [loadingState, setLoadingState] = React.useState<
       "starting" | "generating" | "completed"
@@ -87,7 +86,4 @@ export const ImageGeneration = (
         </div>
       </div>
     );
-  }
-);
-
-ImageGeneration.displayName = "ImageGeneration";
+}
